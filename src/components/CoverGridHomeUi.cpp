@@ -29,7 +29,10 @@ constexpr int COVER_ROW_EXTRA_HEIGHT = 8;
 
 int CoverGridHomeUi::gridColumnsFor(const GfxRenderer& renderer) {
   // 2 columns in landscape gives ~380 px per column on 800px-wide panels.
-  return renderer.getScreenWidth() > renderer.getScreenHeight() ? 2 : GRID_COLUMNS;
+  const auto orient = renderer.getOrientation();
+  return orient == GfxRenderer::LandscapeClockwise || orient == GfxRenderer::LandscapeCounterClockwise
+             ? 2
+             : GRID_COLUMNS;
 }
 
 CoverGridHomeUi::CoverGridHomeUi(GfxRenderer& renderer)
@@ -114,7 +117,6 @@ void CoverGridHomeUi::draw(UiScreen& screen) {
   const int16_t topInset =
       BoardConfig::hasTouch() ? static_cast<int16_t>(theme.spaceLg) : static_cast<int16_t>(theme.spaceSm + 4);
   screen.insetContent(fui::Insets{topInset, hInset, theme.spaceSm, hInset});
-  const bool landscape = renderer.getScreenWidth() > renderer.getScreenHeight();
   // Reserve the band's slot in the flow (its content draws at a fixed screen
   // position in drawHeaderBand); the slot doubles as padding above the heading.
   screen.takeTop(UITheme::getInstance().getMetrics().batteryBarHeight, theme.spaceSm);
@@ -148,6 +150,7 @@ void CoverGridHomeUi::draw(UiScreen& screen) {
   const int rowGap = std::max<int>(4, body.width / 100);
   grid.gap = grid.rowGap = rowGap;
   const int coverRowHeight = std::max(1, (body.height - theme.spaceSm - 2 * rowGap) / 3 + COVER_ROW_EXTRA_HEIGHT);
+  const bool landscape = renderer.getOrientation() != GfxRenderer::Portrait;
   const int16_t featuredHeight = std::min<int>(
       body.height, std::max<int>(coverRowHeight, screen.target().lineHeight(theme.bodyText.font) * (landscape ? 1 : 2) +
                                                      screen.target().lineHeight(theme.smallText.font) * 2 + 32));
@@ -212,7 +215,7 @@ void CoverGridHomeUi::drawCurrent(UiScreen& screen, fui::Rect rect, const int co
   card.styles.selected.radius = theme.listRowRadius;
   card.styles.active = card.styles.selected;
   card.titleText = theme.bodyText;
-  card.titleText.maxLines = renderer.getScreenWidth() > renderer.getScreenHeight() ? 1 : 2;
+  card.titleText.maxLines = renderer.getOrientation() != GfxRenderer::Portrait ? 1 : 2;
   card.authorText = theme.smallText;
   card.progressText = theme.smallText;
   card.progressHeight = 6;
