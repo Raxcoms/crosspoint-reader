@@ -30,9 +30,8 @@ constexpr int COVER_ROW_EXTRA_HEIGHT = 8;
 int CoverGridHomeUi::gridColumnsFor(const GfxRenderer& renderer) {
   // 2 columns in landscape gives ~380 px per column on 800px-wide panels.
   const auto orient = renderer.getOrientation();
-  return orient == GfxRenderer::LandscapeClockwise || orient == GfxRenderer::LandscapeCounterClockwise
-             ? 2
-             : GRID_COLUMNS;
+  return orient == GfxRenderer::LandscapeClockwise || orient == GfxRenderer::LandscapeCounterClockwise ? 2
+                                                                                                       : GRID_COLUMNS;
 }
 
 CoverGridHomeUi::CoverGridHomeUi(GfxRenderer& renderer)
