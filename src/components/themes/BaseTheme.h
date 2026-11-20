@@ -245,6 +245,9 @@ class BaseTheme {
   virtual void fillBatteryIcon(const GfxRenderer& renderer, Rect rect, uint16_t percentage) const;
   virtual void drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
                                const char* btn4) const;
+  // Landscape-mode button hints drawn on the side edge.
+  void drawButtonHintsLandscape(GfxRenderer& renderer, const char* const labels[], bool grayscale, int buttonWidth,
+                                int buttonHeight, const int* buttonPositions) const;
   // Shared by every theme's drawButtonHints(): centres a hint label in its box,
   // wrapping to two lines rather than overflowing when it's too wide to fit.
   static void drawHintLabel(const GfxRenderer& renderer, int fontId, const char* label, int x, int boxWidth, int boxTop,

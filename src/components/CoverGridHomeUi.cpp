@@ -27,6 +27,11 @@ constexpr int16_t COVER_CELL_INSET = 6;
 constexpr int COVER_ROW_EXTRA_HEIGHT = 8;
 }  // namespace
 
+int CoverGridHomeUi::gridColumnsFor(const GfxRenderer& renderer) {
+  // 2 columns in landscape gives ~380 px per column on 800px-wide panels.
+  return renderer.getScreenWidth() > renderer.getScreenHeight() ? 2 : GRID_COLUMNS;
+}
+
 CoverGridHomeUi::CoverGridHomeUi(GfxRenderer& renderer)
     : UiAppHost(renderer), coverCache(renderer), renderer(renderer) {}
 
@@ -216,7 +221,8 @@ void CoverGridHomeUi::drawCurrent(UiScreen& screen, fui::Rect rect, const int co
   // Fit the shared 2:3 cover box within both the row and a grid column. No
   // gap reserve: the cell insets already keep adjacent covers apart, and the
   // SpaceBetween layout absorbs whatever slack remains.
-  const int maxCoverWidth = rect.width / GRID_COLUMNS - 2 * COVER_CELL_INSET;
+  const int cols = gridColumnsFor(renderer);
+  const int maxCoverWidth = rect.width / cols - 2 * COVER_CELL_INSET;
   card.coverSize.height = std::max(1, std::min(std::min<int>(rect.height, coverRowHeight) - 12, maxCoverWidth * 3 / 2));
   card.coverSize.width = std::max(1, card.coverSize.height * 2 / 3);
   noteThumbHeight(card.coverSize.height);
@@ -257,7 +263,7 @@ fui::Rect CoverGridHomeUi::layoutGrid(fui::Rect rect) {
 void CoverGridHomeUi::drawGrid(UiScreen& screen) {
   const auto rect = gridBounds;
   grid.count = books->size() > 1 ? books->size() - 1 : 0;
-  grid.columns = GRID_COLUMNS;
+  grid.columns = gridColumnsFor(renderer);
   grid.columnLayout = fui::CoverGridColumnLayout::SpaceBetween;
   grid.action = SELECT;
   grid.inputMask = fui::InputTouch;

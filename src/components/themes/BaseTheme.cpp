@@ -245,6 +245,45 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   }
 
   renderer.setOrientation(orig_orientation);
+
+  // Landscape mode: draw hints on the side edge, aligned with physical button location.
+  if (orig_orientation == GfxRenderer::LandscapeClockwise || orig_orientation == GfxRenderer::LandscapeCounterClockwise) {
+    drawButtonHintsLandscape(renderer, labels, grayscale, buttonWidth, buttonHeight, buttonPositions);
+  }
+}
+
+void BaseTheme::drawButtonHintsLandscape(GfxRenderer& renderer, const char* const labels[], const bool grayscale,
+                                         const int buttonWidth, const int buttonHeight,
+                                         const int* const buttonPositions) const {
+  const int screenWidth = renderer.getScreenWidth();
+  const int screenH = renderer.getScreenHeight();
+  // In landscape, buttons sit on the side edge. Width becomes height, height becomes width.
+  // Button labels are drawn rotated 90°.
+  const int hintWidth = buttonHeight;   // depth into screen
+  const int hintHeight = buttonWidth;   // vertical extent
+  const int edgeX =
+      renderer.getOrientation() == GfxRenderer::LandscapeClockwise ? 0 : static_cast<int>(screenWidth - hintWidth);
+  // Vertical spacing: distribute buttons across the portrait-height dimension (now screen height).
+  // Use the same portrait panel width as the spacing reference (480 or 528).
+  constexpr int portraitPanelWidth = 480;
+  const float spacingScale = static_cast<float>(screenH) / portraitPanelWidth;
+  const int gap = static_cast<int>((buttonPositions[1] - buttonPositions[0]) * spacingScale);
+
+  for (int i = 0; i < 4; i++) {
+    if (labels[i] == nullptr || labels[i][0] == '\0') continue;
+    const int y = static_cast<int>(buttonPositions[i] * spacingScale);
+    const int bx = edgeX;
+    const int by = y - hintHeight / 2;
+    renderer.fillRect(bx, by, hintWidth, hintHeight, grayscale);
+    if (grayscale) continue;
+    renderer.drawRect(bx, by, hintWidth, hintHeight);
+    // Draw rotated label: text runs vertically, centered in the hint box.
+    const int textW = renderer.getTextWidth(UI_10_FONT_ID, labels[i]);
+    const int textH = renderer.getTextHeight(UI_10_FONT_ID);
+    const int textX = bx + (hintWidth - textH) / 2;
+    const int textY = by + (hintHeight - textW) / 2;
+    renderer.drawTextRotated90CW(UI_10_FONT_ID, textX, textY, labels[i]);
+  }
 }
 
 void BaseTheme::drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const {
