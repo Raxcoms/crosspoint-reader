@@ -105,6 +105,6 @@ class RoundedRaffTheme : public BaseTheme {
   void drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
                        const char* btn4) const override;
   // Landscape-mode button hints drawn on the side edge.
-  void drawButtonHintsLandscapeRoundedRaff(GfxRenderer& renderer, const char* btn1, const char* btn2,
+  void drawButtonHintsLandscapeRoundedRaff(const GfxRenderer& renderer, const char* btn1, const char* btn2,
                                            const char* btn3, const char* btn4) const;
 };

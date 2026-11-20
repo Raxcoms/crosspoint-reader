@@ -155,7 +155,7 @@ void LyraTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   }
 }
 
-void LyraTheme::drawButtonHintsLandscapeLyra(GfxRenderer& renderer, const char* const labels[], const bool grayscale,
+void LyraTheme::drawButtonHintsLandscapeLyra(const GfxRenderer& renderer, const char* const labels[], const bool grayscale,
                                              const int buttonWidth, const int buttonHeight,
                                              const int* const buttonPositions) const {
   const int screenWidth = renderer.getScreenWidth();
@@ -168,7 +168,7 @@ void LyraTheme::drawButtonHintsLandscapeLyra(GfxRenderer& renderer, const char* 
   // Vertical spacing: distribute buttons across the portrait-height dimension (now screen height).
   constexpr int portraitPanelWidth = 480;
   const float spacingScale = static_cast<float>(screenH) / portraitPanelWidth;
-  const int gap = static_cast<int>(buttonPositions[1] - buttonPositions[0]);
+
 
   for (int i = 0; i < 4; i++) {
     if (labels[i] == nullptr || labels[i][0] == '\0') continue;

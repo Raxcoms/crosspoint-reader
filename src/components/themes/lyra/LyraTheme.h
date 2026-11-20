@@ -91,7 +91,7 @@ class LyraTheme : public BaseTheme {
   void drawButtonHints(GfxRenderer& renderer, const char* btn1, const char* btn2, const char* btn3,
                        const char* btn4) const override;
   // Landscape-mode button hints drawn on the side edge.
-  void drawButtonHintsLandscapeLyra(GfxRenderer& renderer, const char* const labels[], bool grayscale,
+  void drawButtonHintsLandscapeLyra(const GfxRenderer& renderer, const char* const labels[], bool grayscale,
                                     int buttonWidth, int buttonHeight, const int* buttonPositions) const;
   void drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const override;
   void drawButtonMenu(GfxRenderer& renderer, Rect rect, int buttonCount, int selectedIndex,

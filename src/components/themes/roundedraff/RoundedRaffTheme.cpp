@@ -265,7 +265,7 @@ void RoundedRaffTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, 
   }
 }
 
-void RoundedRaffTheme::drawButtonHintsLandscapeRoundedRaff(GfxRenderer& renderer, const char* btn1, const char* btn2,
+void RoundedRaffTheme::drawButtonHintsLandscapeRoundedRaff(const GfxRenderer& renderer, const char* btn1, const char* btn2,
                                                            const char* btn3, const char* btn4) const {
   const int screenWidth = renderer.getScreenWidth();
   const int screenH = renderer.getScreenHeight();

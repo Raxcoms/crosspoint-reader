@@ -252,9 +252,9 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   }
 }
 
-void BaseTheme::drawButtonHintsLandscape(GfxRenderer& renderer, const char* const labels[], const bool grayscale,
+void BaseTheme::drawButtonHintsLandscape(const GfxRenderer& renderer, const char* const labels[], const bool grayscale,
                                          const int buttonWidth, const int buttonHeight,
-                                         const int* const buttonPositions) const {
+                                         const int* const buttonPositions) {
   const int screenWidth = renderer.getScreenWidth();
   const int screenH = renderer.getScreenHeight();
   // In landscape, buttons sit on the side edge. Width becomes height, height becomes width.
@@ -267,7 +267,6 @@ void BaseTheme::drawButtonHintsLandscape(GfxRenderer& renderer, const char* cons
   // Use the same portrait panel width as the spacing reference (480 or 528).
   constexpr int portraitPanelWidth = 480;
   const float spacingScale = static_cast<float>(screenH) / portraitPanelWidth;
-  const int gap = static_cast<int>((buttonPositions[1] - buttonPositions[0]) * spacingScale);
 
   for (int i = 0; i < 4; i++) {
     if (labels[i] == nullptr || labels[i][0] == '\0') continue;
