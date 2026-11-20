@@ -247,7 +247,8 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   renderer.setOrientation(orig_orientation);
 
   // Landscape mode: draw hints on the side edge, aligned with physical button location.
-  if (orig_orientation == GfxRenderer::LandscapeClockwise || orig_orientation == GfxRenderer::LandscapeCounterClockwise) {
+  if (orig_orientation == GfxRenderer::LandscapeClockwise ||
+      orig_orientation == GfxRenderer::LandscapeCounterClockwise) {
     drawButtonHintsLandscape(renderer, labels, grayscale, buttonWidth, buttonHeight, buttonPositions);
   }
 }
@@ -259,8 +260,8 @@ void BaseTheme::drawButtonHintsLandscape(const GfxRenderer& renderer, const char
   const int screenH = renderer.getScreenHeight();
   // In landscape, buttons sit on the side edge. Width becomes height, height becomes width.
   // Button labels are drawn rotated 90°.
-  const int hintWidth = buttonHeight;   // depth into screen
-  const int hintHeight = buttonWidth;   // vertical extent
+  const int hintWidth = buttonHeight;  // depth into screen
+  const int hintHeight = buttonWidth;  // vertical extent
   const int edgeX =
       renderer.getOrientation() == GfxRenderer::LandscapeClockwise ? 0 : static_cast<int>(screenWidth - hintWidth);
   // Vertical spacing: distribute buttons across the portrait-height dimension (now screen height).

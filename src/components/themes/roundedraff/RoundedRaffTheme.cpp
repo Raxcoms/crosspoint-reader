@@ -265,8 +265,8 @@ void RoundedRaffTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, 
   }
 }
 
-void RoundedRaffTheme::drawButtonHintsLandscapeRoundedRaff(const GfxRenderer& renderer, const char* btn1, const char* btn2,
-                                                           const char* btn3, const char* btn4) const {
+void RoundedRaffTheme::drawButtonHintsLandscapeRoundedRaff(const GfxRenderer& renderer, const char* btn1,
+                                                           const char* btn2, const char* btn3, const char* btn4) const {
   const int screenWidth = renderer.getScreenWidth();
   const int screenH = renderer.getScreenHeight();
   // In landscape, buttons sit on the side edge. Width becomes height, height becomes width.
@@ -291,7 +291,8 @@ void RoundedRaffTheme::drawButtonHintsLandscapeRoundedRaff(const GfxRenderer& re
   renderer.drawRoundedRect(edgeX, hintY, hintHeight, groupWidth, 2, kBottomRadius, true);
   // Rotate 90° CW: draw text running vertically
   const int backX = edgeX + innerEdgePadding;
-  const int selectX = edgeX + groupWidth - innerEdgePadding - renderer.getTextWidth(kGuideFontId, selectText.c_str(), EpdFontFamily::REGULAR);
+  const int selectX = edgeX + groupWidth - innerEdgePadding -
+                      renderer.getTextWidth(kGuideFontId, selectText.c_str(), EpdFontFamily::REGULAR);
   if (!backDisabled) {
     renderer.drawText(kGuideFontId, backX, textY, backLabel.c_str(), true, EpdFontFamily::REGULAR);
   }
@@ -305,7 +306,8 @@ void RoundedRaffTheme::drawButtonHintsLandscapeRoundedRaff(const GfxRenderer& re
   renderer.fillRect(rightGroupX, hintY, hintHeight, groupWidth, false);
   renderer.drawRoundedRect(rightGroupX, hintY, hintHeight, groupWidth, 2, kBottomRadius, true);
   const int upX = rightGroupX + innerEdgePadding;
-  const int downX = rightGroupX + groupWidth - innerEdgePadding - renderer.getTextWidth(kGuideFontId, downText.c_str(), EpdFontFamily::REGULAR);
+  const int downX = rightGroupX + groupWidth - innerEdgePadding -
+                    renderer.getTextWidth(kGuideFontId, downText.c_str(), EpdFontFamily::REGULAR);
   renderer.drawText(kGuideFontId, upX, textY, upText.c_str(), true, EpdFontFamily::REGULAR);
   renderer.drawText(kGuideFontId, downX, textY, downText.c_str(), true, EpdFontFamily::REGULAR);
 }
