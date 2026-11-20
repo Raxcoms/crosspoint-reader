@@ -258,4 +258,54 @@ void RoundedRaffTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, 
   renderer.drawText(kGuideFontId, downX, textY, downText.c_str(), true, EpdFontFamily::REGULAR);
 
   renderer.setOrientation(origOrientation);
+
+  // Landscape mode: draw hints on the side edge, aligned with physical button location.
+  if (origOrientation == GfxRenderer::LandscapeClockwise || origOrientation == GfxRenderer::LandscapeCounterClockwise) {
+    drawButtonHintsLandscapeRoundedRaff(renderer, btn1, btn2, btn3, btn4);
+  }
+}
+
+void RoundedRaffTheme::drawButtonHintsLandscapeRoundedRaff(GfxRenderer& renderer, const char* btn1, const char* btn2,
+                                                           const char* btn3, const char* btn4) const {
+  const int screenWidth = renderer.getScreenWidth();
+  const int screenH = renderer.getScreenHeight();
+  // In landscape, buttons sit on the side edge. Width becomes height, height becomes width.
+  // Two groups of 2 buttons each, stacked vertically on the side edge.
+  constexpr int portraitPanelWidth = 480;
+  const float spacingScale = static_cast<float>(screenH) / portraitPanelWidth;
+  constexpr int sidePadding = 20;
+  const int groupWidth = static_cast<int>((screenWidth - sidePadding * 2 - 10) / 2);
+  const int hintHeight = 30;  // buttonHintsHeight - 10
+  const int hintY = static_cast<int>((screenH - hintHeight - 10) * spacingScale);
+  const int edgeX =
+      renderer.getOrientation() == GfxRenderer::LandscapeClockwise ? 0 : static_cast<int>(screenWidth - hintHeight);
+  const int textY = hintY + (hintHeight - renderer.getLineHeight(kGuideFontId)) / 2;
+  constexpr int innerEdgePadding = 16;
+
+  // Left group (back + select)
+  const bool backDisabled = (btn1 == nullptr || btn1[0] == '\0');
+  const std::string backLabel = backDisabled ? "" : std::string(btn1);
+  const std::string selectText = (btn2 && btn2[0] != '\0') ? std::string(btn2) : "";
+
+  renderer.fillRect(edgeX, hintY, hintHeight, groupWidth, false);
+  renderer.drawRoundedRect(edgeX, hintY, hintHeight, groupWidth, 2, kBottomRadius, true);
+  // Rotate 90° CW: draw text running vertically
+  const int backX = edgeX + innerEdgePadding;
+  const int selectX = edgeX + groupWidth - innerEdgePadding - renderer.getTextWidth(kGuideFontId, selectText.c_str(), EpdFontFamily::REGULAR);
+  if (!backDisabled) {
+    renderer.drawText(kGuideFontId, backX, textY, backLabel.c_str(), true, EpdFontFamily::REGULAR);
+  }
+  renderer.drawText(kGuideFontId, selectX, textY, selectText.c_str(), true, EpdFontFamily::REGULAR);
+
+  // Right group (up + down)
+  const std::string upText = (btn3 && btn3[0] != '\0') ? std::string(btn3) : "";
+  const std::string downText = (btn4 && btn4[0] != '\0') ? std::string(btn4) : "";
+
+  const int rightGroupX = edgeX + groupWidth + 10;
+  renderer.fillRect(rightGroupX, hintY, hintHeight, groupWidth, false);
+  renderer.drawRoundedRect(rightGroupX, hintY, hintHeight, groupWidth, 2, kBottomRadius, true);
+  const int upX = rightGroupX + innerEdgePadding;
+  const int downX = rightGroupX + groupWidth - innerEdgePadding - renderer.getTextWidth(kGuideFontId, downText.c_str(), EpdFontFamily::REGULAR);
+  renderer.drawText(kGuideFontId, upX, textY, upText.c_str(), true, EpdFontFamily::REGULAR);
+  renderer.drawText(kGuideFontId, downX, textY, downText.c_str(), true, EpdFontFamily::REGULAR);
 }
