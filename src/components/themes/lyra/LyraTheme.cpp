@@ -112,20 +112,31 @@ void LyraTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   }
 
   const GfxRenderer::Orientation orig_orientation = renderer.getOrientation();
-  renderer.setOrientation(GfxRenderer::Orientation::Portrait);
+  const bool landscape =
+      orig_orientation == GfxRenderer::LandscapeClockwise || orig_orientation == GfxRenderer::LandscapeCounterClockwise;
 
-  const int pageHeight = renderer.getScreenHeight();
   constexpr int buttonWidth = 80;
   constexpr int smallButtonHeight = 15;
   constexpr int buttonHeight = LyraMetrics::values.buttonHintsHeight;
-  constexpr int buttonY = LyraMetrics::values.buttonHintsHeight;  // Distance from bottom
   // Keyed to the portrait panel width: the 528-wide X3 gets more spacing than
   // the 480-wide boards (X4, X4 Pro, and the other 800x480 panels).
   constexpr int narrowButtonPositions[] = {58, 146, 254, 342};
   constexpr int wideButtonPositions[] = {65, 157, 291, 383};
-  const int* buttonPositions = renderer.getScreenWidth() >= 528 ? wideButtonPositions : narrowButtonPositions;
+  // In landscape the portrait width is the logical screen height.
+  const int portraitWidth = landscape ? renderer.getScreenHeight() : renderer.getScreenWidth();
+  const int* buttonPositions = portraitWidth >= 528 ? wideButtonPositions : narrowButtonPositions;
   const char* labels[] = {btn1, btn2, btn3, btn4};
   const bool grayscale = renderer.getRenderMode() != GfxRenderer::BW && !renderer.grayPlanesAreAbsolute();
+
+  if (landscape) {
+    drawButtonHintsLandscapeLyra(renderer, labels, grayscale, buttonWidth, buttonHeight, buttonPositions);
+    return;
+  }
+
+  renderer.setOrientation(GfxRenderer::Orientation::Portrait);
+
+  const int pageHeight = renderer.getScreenHeight();
+  const int buttonY = buttonHeight;  // Distance from bottom
 
   for (int i = 0; i < 4; i++) {
     const int x = buttonPositions[i];
@@ -148,41 +159,32 @@ void LyraTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   }
 
   renderer.setOrientation(orig_orientation);
-
-  // Landscape mode: draw hints on the side edge, aligned with physical button location.
-  if (orig_orientation == GfxRenderer::LandscapeClockwise ||
-      orig_orientation == GfxRenderer::LandscapeCounterClockwise) {
-    drawButtonHintsLandscapeLyra(renderer, labels, grayscale, buttonWidth, buttonHeight, buttonPositions);
-  }
 }
 
 void LyraTheme::drawButtonHintsLandscapeLyra(const GfxRenderer& renderer, const char* const labels[],
                                              const bool grayscale, const int buttonWidth, const int buttonHeight,
                                              const int* const buttonPositions) const {
   const int screenWidth = renderer.getScreenWidth();
-  const int screenH = renderer.getScreenHeight();
-  // In landscape, buttons sit on the side edge. Width becomes height, height becomes width.
-  const int hintWidth = buttonHeight;  // depth into screen
-  const int hintHeight = buttonWidth;  // vertical extent
-  const int edgeX =
-      renderer.getOrientation() == GfxRenderer::LandscapeClockwise ? 0 : static_cast<int>(screenWidth - hintWidth);
-  // Vertical spacing: distribute buttons across the portrait-height dimension (now screen height).
-  constexpr int portraitPanelWidth = 480;
-  const float spacingScale = static_cast<float>(screenH) / portraitPanelWidth;
+  const int screenHeight = renderer.getScreenHeight();
+  const bool clockwise = renderer.getOrientation() == GfxRenderer::LandscapeClockwise;
+  // Mirror the portrait band's panel footprint so each rail box sits over its
+  // physical button, same as BaseTheme::drawButtonHintsLandscape.
+  const int hintWidth = buttonHeight;  // depth into the screen
+  const int boxSpan = buttonWidth;     // extent along the screen edge
+  const int edgeX = clockwise ? 0 : screenWidth - hintWidth;
 
   for (int i = 0; i < 4; i++) {
     if (labels[i] == nullptr || labels[i][0] == '\0') continue;
-    const int y = static_cast<int>(buttonPositions[i] * spacingScale);
-    const int bx = edgeX;
-    const int by = y - hintHeight / 2;
-    renderer.fillRoundedRect(bx, by, hintWidth, hintHeight, cornerRadius, grayscale ? Color::Black : Color::White);
+    const int by = clockwise ? buttonPositions[i] : screenHeight - boxSpan - buttonPositions[i];
+    renderer.fillRoundedRect(edgeX, by, hintWidth, boxSpan, cornerRadius, grayscale ? Color::Black : Color::White);
     if (grayscale) continue;
-    renderer.drawRoundedRect(bx, by, hintWidth, hintHeight, 1, cornerRadius, true, true, false, false, true);
-    // Draw rotated label: text runs vertically, centered in the hint box.
+    renderer.drawRoundedRect(edgeX, by, hintWidth, boxSpan, 1, cornerRadius, true, true, false, false, true);
+    // Rotated text starts at the anchor and runs toward smaller y, so the
+    // start lands at the box bottom plus half the slack.
     const int textW = renderer.getTextWidth(SMALL_FONT_ID, labels[i]);
     const int textH = renderer.getTextHeight(SMALL_FONT_ID);
-    const int textX = bx + (hintWidth - textH) / 2;
-    const int textY = by + (hintHeight - textW) / 2;
+    const int textX = edgeX + (hintWidth - textH) / 2;
+    const int textY = by + (boxSpan + textW) / 2;
     renderer.drawTextRotated90CW(SMALL_FONT_ID, textX, textY, labels[i]);
   }
 }
