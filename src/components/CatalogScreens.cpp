@@ -11,6 +11,7 @@
 #include "HeaderBackTapTarget.h"
 #include "UITheme.h"
 #include "icons/headerIcons.h"
+#include "themes/HeaderChrome.h"
 
 namespace fui = freeink::ui;
 
