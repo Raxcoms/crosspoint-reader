@@ -15,8 +15,14 @@ harness = r"""
 #include <components/lists/list.h>
 #include <cassert>
 namespace fui = freeink::ui;
+constexpr int SMALL_FONT_ID = 0;
 struct UiScreen {
   int16_t height = 80;
+  // The viewport test checks ListNav clamping only; the position-readout line
+  // reservation is exercised by the real fui Screen in
+  // test_text_settings_layout.py and on device.
+  void insetContent(fui::Insets) {}
+  fui::Rect contentRect() const { return fui::Rect{0, 0, 200, height}; }
   void syncListViewport(fui::ListNav& nav, fui::ListProps& props, int count, int offset) {
     nav.syncToProps({0, 0, 200, height}, 20, 0, count, props, offset);
   }
@@ -24,6 +30,9 @@ struct UiScreen {
 struct UiListActivity {
   fui::ListNav nav;
   int count = 16;
+  bool positionReadout = true;
+  int16_t readoutRight_ = 0, readoutY_ = -1;
+  struct { int getLineHeight(int) const { return 20; } } renderer;
   fui::ListNav& activeNav() { return nav; }
   int listCount() const { return count; }
   void syncListViewport(UiScreen&, fui::ListProps&, int = 0);
