@@ -1042,7 +1042,6 @@ void LibraryListActivity::drawPositionReadout() const {
   char buf[32];
   const char* positionFormat = groupsCollapsed ? tr(STR_LIBRARY_GROUP_POSITION) : tr(STR_LIBRARY_POSITION);
   snprintf(buf, sizeof(buf), positionFormat, selectedEntry() + 1, count);
-  const auto& metrics = UITheme::getInstance().getMetrics();
   const int width = renderer.getTextWidth(SMALL_FONT_ID, buf);
   // Bottom-right of the viewable area, clear of the bezel and rounded corner.
   const Rect area = UITheme::getContentArea(renderer);
@@ -1072,7 +1071,6 @@ void LibraryListActivity::drawHoldHelp() const {
     help = tr(STR_LIBRARY_HOLD_GROUPS);
   if (!help) return;
 
-  const auto& metrics = UITheme::getInstance().getMetrics();
   const int lineHeight = renderer.getLineHeight(SMALL_FONT_ID);
   const Rect area = UITheme::getContentArea(renderer);
   const int left = std::max(area.x, bottomCornerClearance()) + UITheme::getHintRailLeftGutter(renderer);

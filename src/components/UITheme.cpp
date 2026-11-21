@@ -150,18 +150,18 @@ int16_t UITheme::getHintBandBottomInset(const GfxRenderer& renderer) {
       orientation == GfxRenderer::Orientation::LandscapeCounterClockwise) {
     return 0;  // The rail is a side gutter in landscape, not a bottom band.
   }
-  return static_cast<int16_t>(getMetrics().buttonHintsHeight);
+  return static_cast<int16_t>(getInstance().getMetrics().buttonHintsHeight);
 }
 
 int16_t UITheme::getHintRailLeftGutter(const GfxRenderer& renderer) {
   return renderer.getOrientation() == GfxRenderer::Orientation::LandscapeClockwise
-             ? static_cast<int16_t>(getMetrics().buttonHintsHeight)
+             ? static_cast<int16_t>(getInstance().getMetrics().buttonHintsHeight)
              : 0;
 }
 
 int16_t UITheme::getHintRailRightGutter(const GfxRenderer& renderer) {
   return renderer.getOrientation() == GfxRenderer::Orientation::LandscapeCounterClockwise
-             ? static_cast<int16_t>(getMetrics().buttonHintsHeight)
+             ? static_cast<int16_t>(getInstance().getMetrics().buttonHintsHeight)
              : 0;
 }
 
