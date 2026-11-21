@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <string>
 
+#include "HeaderChrome.h"
 #include "I18n.h"
 #include "RecentBooksStore.h"
 #include "clippings/SelectionGeometry.h"
@@ -466,6 +467,18 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
   // Battery + clock chrome and their title reserves live in the FreeInkUI
   // header component; this only fills the values from settings and metrics.
   applyHeaderStatus(renderer, props);
+  // In landscape the hint rail covers the edge corners where the header pins
+  // the battery and clock, so withhold that chrome and draw the group
+  // centered after the band is painted.
+  const auto orientation = renderer.getOrientation();
+  const bool centerStatus = orientation == GfxRenderer::Orientation::LandscapeClockwise ||
+                            orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
+  freeink::ui::HeaderStatusProps centeredChrome;
+  if (centerStatus) {
+    centeredChrome = props.status;
+    props.status.showBattery = false;
+    props.status.clockText = nullptr;
+  }
   // Callers pass a full-width header rect; headerBand fits it to the board's bezel.
   const fui::Rect band = headerBand(renderer,
                                     fui::Rect{static_cast<int16_t>(rect.x), static_cast<int16_t>(rect.y),
@@ -504,6 +517,9 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
     props.styles.normal.borderWidth = tokens.headerUnderline;
   }
   fui::header(ui.frame, band, props);
+  if (centerStatus) {
+    fui::drawCenteredHeaderStatus(ui.frame, band, centeredChrome);
+  }
 }
 
 void BaseTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char* label, const char* rightLabel) const {
