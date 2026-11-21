@@ -551,9 +551,11 @@ void CrossPointWebServerActivity::renderServerRunning() const {
 
     // STA mode display (original behavior)
     // std::string ipInfo = "IP Address: " + connectedIP;
-    GUI.drawCenteredText(renderer, content, UI_10_FONT_ID, startY, tr(STR_OPEN_URL_HINT), true, EpdFontFamily::BOLD);
+    UITheme::drawCenteredText(renderer, content, UI_10_FONT_ID, startY, tr(STR_OPEN_URL_HINT), true,
+                              EpdFontFamily::BOLD);
     startY += height10;
-    GUI.drawCenteredText(renderer, content, UI_10_FONT_ID, startY, tr(STR_SCAN_QR_HINT), true, EpdFontFamily::BOLD);
+    UITheme::drawCenteredText(renderer, content, UI_10_FONT_ID, startY, tr(STR_SCAN_QR_HINT), true,
+                              EpdFontFamily::BOLD);
     startY += height10 + metrics.verticalSpacing * 2;
 
     // Show QR code for URL
@@ -563,12 +565,12 @@ void CrossPointWebServerActivity::renderServerRunning() const {
     startY += QR_CODE_HEIGHT + metrics.verticalSpacing * 2;
 
     // Show web server URL prominently
-    GUI.drawCenteredText(renderer, content, UI_10_FONT_ID, startY, webInfo.c_str(), true);
+    UITheme::drawCenteredText(renderer, content, UI_10_FONT_ID, startY, webInfo.c_str(), true);
     startY += height10 + 5;
 
     // Also show hostname URL
     std::string hostnameUrl = std::string(tr(STR_OR_HTTP_PREFIX)) + AP_HOSTNAME + ".local/";
-    GUI.drawCenteredText(renderer, content, SMALL_FONT_ID, startY, hostnameUrl.c_str(), true);
+    UITheme::drawCenteredText(renderer, content, SMALL_FONT_ID, startY, hostnameUrl.c_str(), true);
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_EXIT), "", "", "");
