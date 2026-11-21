@@ -69,6 +69,16 @@ class HomeActivity final : public Activity {
     if (idx == i) return HomeMenuItem::SETTINGS_MENU;
     return HomeMenuItem::NONE;
   }
+  // Rects for the cover and the menu, shared by render and input routing so
+  // the touch bands always match what is drawn: portrait stacks the menu
+  // below the cover, landscape splits them left/right inside the rail-safe
+  // band.
+  struct HomeContentLayout {
+    Rect cover;
+    Rect menu;
+  };
+  HomeContentLayout homeContentLayout() const;
+
   void onRecentBookSelected(const std::string& path);
   void onFileBrowserOpen();
   void onLibraryOpen();

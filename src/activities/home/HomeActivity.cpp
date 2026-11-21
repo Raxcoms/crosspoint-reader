@@ -247,18 +247,16 @@ void HomeActivity::loop() {
     return;
   }
 
-  // Match the rendered cover grid, which lays tiles inside getContentArea()
-  // (origin content.x + contentSidePadding, span content.width). Using
-  // screen-relative getScreenWidth()/contentSidePadding here offset the touch
-  // targets from the drawn covers by content.x on bezel-inset panels (EEGO A4).
-  const Rect content = UITheme::getInstance().getContentArea(renderer);
+  // Route touches through the same rects render() draws through, so the hit
+  // bands stay on the visuals (see homeContentLayout).
+  const auto layout = homeContentLayout();
   const int coverColumnCount = std::max(1, metrics.homeRecentBooksCount);
   const int recentCount = std::min(static_cast<int>(recentBooks.size()), coverColumnCount);
-  const int coverColumnWidth = (content.width - 2 * metrics.contentSidePadding) / coverColumnCount;
+  const int coverColumnWidth = (layout.cover.width - 2 * metrics.contentSidePadding) / coverColumnCount;
   int touchedBook = -1;
-  const auto coverTouch = mappedInput.colTouch(touchedBook, content.x + metrics.contentSidePadding, coverColumnWidth,
-                                               recentCount, metrics.homeTopPadding,
-                                               metrics.homeTopPadding + metrics.homeCoverTileHeight, coverColumnWidth);
+  const auto coverTouch =
+      mappedInput.colTouch(touchedBook, layout.cover.x + metrics.contentSidePadding, coverColumnWidth, recentCount,
+                           layout.cover.y, static_cast<int>(layout.cover.y + layout.cover.height), coverColumnWidth);
   if (coverTouch != MappedInputManager::RowTouch::None) {
     if (coverTouch == MappedInputManager::RowTouch::Down) {
       if (selectorIndex != touchedBook) {
@@ -273,7 +271,7 @@ void HomeActivity::loop() {
     return;
   }
 
-  const int menuTop = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset;
+  const int menuTop = layout.menu.y;
   const int renderedMenuCount =
       menuCount - (metrics.homeContinueReadingInMenu ? 0 : static_cast<int>(recentBooks.size()));
   int menuRow = -1;
@@ -303,13 +301,43 @@ void HomeActivity::loop() {
   }
 }
 
+HomeActivity::HomeContentLayout HomeActivity::homeContentLayout() const {
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const int pageHeight = renderer.getScreenHeight();
+  // Content columns clear the bezel insets on rounded panels; the header
+  // self-insets in drawHeader, so only the cover/menu need it here.
+  const Rect content = UITheme::getInstance().getContentArea(renderer);
+
+  const auto orientation = renderer.getOrientation();
+  const bool landscape = orientation == GfxRenderer::Orientation::LandscapeClockwise ||
+                         orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
+  if (!landscape) {
+    // The menu height comes from the original portrait layout; the cover tile
+    // takes everything above it.
+    return {
+        Rect{content.x, metrics.homeTopPadding, content.width, metrics.homeCoverTileHeight},
+        Rect{content.x, metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset, content.width,
+             pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing +
+                           metrics.homeMenuTopOffset + metrics.buttonHintsHeight)}};
+  }
+
+  // Landscape is too short to stack cover over menu: split the band (bezel
+  // insets plus the rail gutter) left/right. The cover card and its title
+  // text, and the icon+label menu rows, both fit a half band (X4: ~375px).
+  const int railLeft = UITheme::getHintRailLeftGutter(renderer);
+  const int railRight = UITheme::getHintRailRightGutter(renderer);
+  const int bandX = content.x + railLeft;
+  const int bandW = content.width - railLeft - railRight;
+  const int colW = bandW / 2;
+  const int menuTop = metrics.homeTopPadding + metrics.homeMenuTopOffset;
+  return {Rect{bandX, metrics.homeTopPadding, colW, metrics.homeCoverTileHeight},
+          Rect{bandX + colW, menuTop, bandW - colW, pageHeight - menuTop}};
+}
+
 void HomeActivity::render(RenderLock&&) {
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto pageWidth = renderer.getScreenWidth();
-  const auto pageHeight = renderer.getScreenHeight();
-  // Content columns clear the bezel insets on rounded panels. The header
-  // self-insets in drawHeader, so only the cover/menu need it here.
-  const Rect content = UITheme::getInstance().getContentArea(renderer);
+  const auto layout = homeContentLayout();
 
   renderer.clearScreen();
   // A cover snapshot from the other output polarity holds the other byte form (night mode keeps images pre-inverted so
@@ -331,14 +359,13 @@ void HomeActivity::render(RenderLock&&) {
   // Record the tile rect so storeCoverBuffer (called from the theme) knows
   // which sub-region of the framebuffer to snapshot. ~16 KB in Portrait
   // instead of the 48 KB full framebuffer the previous bind captured.
-  coverRectX = content.x;
-  coverRectY = metrics.homeTopPadding;
-  coverRectW = content.width;
-  coverRectH = metrics.homeCoverTileHeight;
+  coverRectX = layout.cover.x;
+  coverRectY = layout.cover.y;
+  coverRectW = layout.cover.width;
+  coverRectH = layout.cover.height;
 
-  GUI.drawRecentBookCover(renderer, Rect{content.x, metrics.homeTopPadding, content.width, metrics.homeCoverTileHeight},
-                          recentBooks, selectorIndex, coverRendered, coverBufferStored, bufferRestored,
-                          std::bind(&HomeActivity::storeCoverBuffer, this));
+  GUI.drawRecentBookCover(renderer, layout.cover, recentBooks, selectorIndex, coverRendered, coverBufferStored,
+                          bufferRestored, std::bind(&HomeActivity::storeCoverBuffer, this));
 
   // Build menu items dynamically
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_LIBRARY), tr(STR_FILE_TRANSFER),
@@ -357,11 +384,7 @@ void HomeActivity::render(RenderLock&&) {
   }
 
   GUI.drawButtonMenu(
-      renderer,
-      Rect{content.x, metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset, content.width,
-           pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing +
-                         metrics.homeMenuTopOffset + metrics.buttonHintsHeight)},
-      static_cast<int>(menuItems.size()),
+      renderer, layout.menu, static_cast<int>(menuItems.size()),
       metrics.homeContinueReadingInMenu ? selectorIndex : selectorIndex - recentBooks.size(),
       [&menuItems](int index) { return std::string(menuItems[index]); },
       [&menuIcons](int index) { return menuIcons[index]; });
