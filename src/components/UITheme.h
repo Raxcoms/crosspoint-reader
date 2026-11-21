@@ -8,8 +8,6 @@
 #include "CrossPointSettings.h"
 #include "components/themes/BaseTheme.h"
 
-class CoverGridHomeUi;
-
 class UITheme {
   // Static instance
   static UITheme instance;
@@ -41,16 +39,21 @@ class UITheme {
                                       int maxLines, bool black = true,
                                       EpdFontFamily::Style style = EpdFontFamily::REGULAR,
                                       TextVerticalAlignment verticalAlignment = TextVerticalAlignment::CENTER);
-  static bool supportsCoverGrid();
-  static bool hasCoverGridHome();
-  static void drawCoverGridHome(CoverGridHomeUi& home);
   void reload();
-  void setTheme(CrossPointSettings::UI_THEME type);
   static std::string getCoverThumbPath(std::string coverBmpPath, int coverHeight);
   static UIIcon getFileIcon(const std::string& filename);
   static int getStatusBarHeight();
   static int getProgressBarHeight();
   static int getReaderStatusBarHeight();
+  // Portrait button-hint band depth at the bottom edge. In landscape the hints
+  // form a side rail that is already part of the fui safe area (see
+  // UiAppHost::railSafeDeviceContext), so landscape screens must not reserve a
+  // bottom band for it too.
+  static int16_t getHintBandBottomInset(const GfxRenderer& renderer);
+  // Rail depth on the edge the hint rail occupies in landscape (left in
+  // clockwise, right in counter-clockwise); 0 in portrait and on touch boards.
+  static int16_t getHintRailLeftGutter(const GfxRenderer& renderer);
+  static int16_t getHintRailRightGutter(const GfxRenderer& renderer);
 
  private:
   BaseTheme fallbackTheme;

@@ -34,7 +34,7 @@ void HomeButtonSettingsActivity::render(RenderLock&& lock) {
 void HomeButtonSettingsActivity::buildScreen(UiScreen& screen) {
   const auto& metrics = UITheme::getInstance().getMetrics();
   screen.setContentMarginFromScreen(fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight), 0,
-                                                static_cast<int16_t>(metrics.buttonHintsHeight), 0});
+                                                UITheme::getHintBandBottomInset(renderer), 0});
   screen.spacer(static_cast<int16_t>(metrics.verticalSpacing));
   for (int i = 0; i < listCount(); ++i) {
     rows[i].label = I18N.get(home_button::GESTURE_LABELS[i]);

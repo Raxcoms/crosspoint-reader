@@ -287,15 +287,13 @@ void EpubReaderBookmarksActivity::render(RenderLock&&) {
 
   const auto pageWidth = renderer.getScreenWidth();
   const auto orientation = renderer.getOrientation();
-  // Landscape orientation: reserve a horizontal gutter for button hints.
-  const bool isLandscapeCw = orientation == GfxRenderer::Orientation::LandscapeClockwise;
-  const bool isLandscapeCcw = orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
   // Inverted portrait: reserve vertical space for hints at the top.
   const bool isPortraitInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
-  const int hintGutterWidth = (isLandscapeCw || isLandscapeCcw) ? 40 : 0;
-  // Landscape CW places hints on the left edge; CCW keeps them on the right.
-  const int contentX = isLandscapeCw ? hintGutterWidth : 0;
-  const int contentWidth = pageWidth - hintGutterWidth;
+  // Landscape: the hint rail occupies one edge, left for CW and right for CCW.
+  const int railLeft = static_cast<int>(UITheme::getHintRailLeftGutter(renderer));
+  const int railRight = static_cast<int>(UITheme::getHintRailRightGutter(renderer));
+  const int contentX = railLeft;
+  const int contentWidth = pageWidth - railLeft - railRight;
   const int contentY = isPortraitInverted ? 50 : 0;
 
   // Manual centering to honor content gutters.

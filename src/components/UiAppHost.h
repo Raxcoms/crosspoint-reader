@@ -42,7 +42,6 @@ class UiAppHost {
   // complete published generation. Call from the render task wherever the app
   // should paint; chrome before, hints after.
   void renderUi();
-
   // What loop-task routing saw this pass. `routed` is true when the gate was
   // open and the snapshot carried relevant touch input — the invalidated()
   // repaint check belongs behind it, so a pending render requested elsewhere
@@ -72,6 +71,11 @@ class UiAppHost {
   UiApp app;
 
  private:
+  // fui device context with the landscape hint-rail gutter folded into the
+  // safe area, so every FUI screen lays out clear of the side button boxes.
+  freeink::ui::DeviceContext railSafeDeviceContext() const;
+
+  const GfxRenderer& gfxRenderer;
   // Opened by the render task after publication and closed on lifecycle/state
   // resets; read by the loop task (route*).
   std::atomic<bool> uiReady{false};

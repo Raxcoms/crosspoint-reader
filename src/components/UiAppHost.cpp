@@ -1,11 +1,13 @@
 #include "UiAppHost.h"
 
+#include <GfxRenderer.h>
+
 #include "UiAppHelpers.h"
 
 namespace fui = freeink::ui;
 
 UiAppHost::UiAppHost(const GfxRenderer& renderer)
-    : uiTarget(makeUiTarget(renderer)), app(uiTarget, uiTarget.deviceContext()) {}
+    : uiTarget(makeUiTarget(renderer)), app(uiTarget, uiTarget.deviceContext()), gfxRenderer(renderer) {}
 
 void UiAppHost::resetUi() {
   uiReady = false;
@@ -13,9 +15,19 @@ void UiAppHost::resetUi() {
 }
 
 void UiAppHost::renderUi() {
-  app.setDevice(uiTarget.deviceContext());
+  app.setDevice(railSafeDeviceContext());
   app.render();
   uiReady = true;
+}
+
+freeink::ui::DeviceContext UiAppHost::railSafeDeviceContext() const {
+  auto device = uiTarget.deviceContext();
+  // In landscape the four button-hint boxes form a rail on the button edge;
+  // fold that gutter into the safe area so fui bodies, lists and popups stop
+  // short of it instead of drawing under it.
+  device.safeArea.left += UITheme::getHintRailLeftGutter(gfxRenderer);
+  device.safeArea.right += UITheme::getHintRailRightGutter(gfxRenderer);
+  return device;
 }
 
 UiAppHost::TouchRoute UiAppHost::routeTouch(const MappedInputManager& input, const bool withLongPress,

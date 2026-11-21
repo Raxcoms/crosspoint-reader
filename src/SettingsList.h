@@ -276,13 +276,6 @@ inline SettingInfo buildDoublePowerButtonSetting() {
       "doublePwrBtn", StrId::STR_CAT_CONTROLS);
 }
 
-inline std::vector<StrId> homeThemeValues() {
-  static constexpr StrId VALUES[] = {StrId::STR_THEME_CLASSIC, StrId::STR_THEME_LYRA, StrId::STR_THEME_LYRA_EXTENDED,
-                                     StrId::STR_THEME_ROUNDEDRAFF, StrId::STR_THEME_COVER_GRID};
-  const size_t count = UITheme::supportsCoverGrid() ? std::size(VALUES) : std::size(VALUES) - 1;
-  return {VALUES, VALUES + count};
-}
-
 using SettingVisitor = void (*)(void* context, SettingInfo& info);
 
 // Visits synchronously in list order. Borrowed references are valid only during

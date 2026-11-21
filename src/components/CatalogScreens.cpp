@@ -24,6 +24,17 @@ void catalogScreenHeader(UiAppHost::UiScreen& screen, const GfxRenderer& rendere
   // Same battery/clock band as every GUI.drawHeader screen; the header
   // heights are unified across themes, so the buttons derive from the band.
   GUI.applyHeaderStatus(renderer, header);
+  // Landscape: the hint rail covers the corners the header pins its status to,
+  // so withhold that chrome and draw it centered after the band.
+  const auto orientation = renderer.getOrientation();
+  const bool centerStatus = orientation == GfxRenderer::Orientation::LandscapeClockwise ||
+                            orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
+  fui::HeaderStatusProps centeredChrome;
+  if (centerStatus) {
+    centeredChrome = header.status;
+    header.status.showBattery = false;
+    header.status.clockText = nullptr;
+  }
   const auto frameRect = screen.frame().screen();
   const fui::Rect band = BaseTheme::headerBand(renderer,
                                                fui::Rect{frameRect.x, static_cast<int16_t>(metrics.topPadding),
@@ -61,7 +72,7 @@ void catalogScreenHeader(UiAppHost::UiScreen& screen, const GfxRenderer& rendere
   fui::header(screen.frame(), band, header);
   screen.setContentMarginFromScreen(
       fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing), 0,
-                  static_cast<int16_t>(metrics.buttonHintsHeight), 0});
+                  UITheme::getHintBandBottomInset(renderer), 0});
 }
 
 void catalogCenteredBlock(UiAppHost::UiScreen& screen, const std::initializer_list<CatalogLine> lines) {

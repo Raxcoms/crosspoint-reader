@@ -140,9 +140,11 @@ void ButtonRemapActivity::render(RenderLock&&) {
 
   // Temporary warning banner for duplicates.
   if (!errorMessage.empty()) {
-    GUI.drawHelpText(renderer,
-                     Rect{0, pageHeight - metrics.buttonHintsHeight - metrics.contentSidePadding - 15, pageWidth, 20},
-                     errorMessage.c_str());
+    GUI.drawHelpText(
+        renderer,
+        Rect{static_cast<int>(UITheme::getHintRailLeftGutter(renderer)),
+             pageHeight - UITheme::getHintBandBottomInset(renderer) - metrics.contentSidePadding - 15, pageWidth, 20},
+        errorMessage.c_str());
   }
 
   // Provide side button actions at the bottom of the screen (split across two lines).

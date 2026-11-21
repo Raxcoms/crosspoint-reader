@@ -161,20 +161,16 @@ void DictionaryDefinitionActivity::onExit() {
 DictionaryDefinitionActivity::BodyArea DictionaryDefinitionActivity::bodyArea() const {
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto orientation = renderer.getOrientation();
-  const bool isLandscape = orientation == GfxRenderer::Orientation::LandscapeClockwise ||
-                           orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
   const bool isInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
-  const int hintGutterWidth = isLandscape ? metrics.sideButtonHintsWidth : 0;
   int top, right, bottom, left;
   renderer.getOrientedViewableTRBL(&top, &right, &bottom, &left);
-  const int contentLeft =
-      std::max(left, orientation == GfxRenderer::Orientation::LandscapeClockwise ? hintGutterWidth : 0);
-  const int contentRight =
-      std::max(right, orientation == GfxRenderer::Orientation::LandscapeCounterClockwise ? hintGutterWidth : 0);
+  const int contentLeft = std::max(left, static_cast<int>(UITheme::getHintRailLeftGutter(renderer)));
+  const int contentRight = std::max(right, static_cast<int>(UITheme::getHintRailRightGutter(renderer)));
   const int x = contentLeft + metrics.contentSidePadding;
   const int y = std::max(top, isInverted ? metrics.buttonHintsHeight : 0) + metrics.topPadding + metrics.headerHeight +
                 metrics.verticalSpacing;
-  const int bottomArea = std::max(bottom, metrics.buttonHintsHeight) + metrics.verticalSpacing;
+  const int bottomArea =
+      std::max(bottom, static_cast<int>(UITheme::getHintBandBottomInset(renderer))) + metrics.verticalSpacing;
   return {x, y, renderer.getScreenWidth() - contentLeft - contentRight - 2 * metrics.contentSidePadding,
           renderer.getScreenHeight() - y - bottomArea};
 }
@@ -707,12 +703,12 @@ void DictionaryDefinitionActivity::render(RenderLock&&) {
 
   const auto& metrics = UITheme::getInstance().getMetrics();
   const auto orientation = renderer.getOrientation();
-  const bool isLandscapeCw = orientation == GfxRenderer::Orientation::LandscapeClockwise;
-  const bool isLandscapeCcw = orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
   const bool isInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
-  const int hintGutterWidth = (isLandscapeCw || isLandscapeCcw) ? metrics.sideButtonHintsWidth : 0;
-  const int contentX = isLandscapeCw ? hintGutterWidth : 0;
-  const int contentWidth = renderer.getScreenWidth() - hintGutterWidth;
+  // The header band stops short of the landscape hint rail on its edge.
+  const int railLeft = static_cast<int>(UITheme::getHintRailLeftGutter(renderer));
+  const int railRight = static_cast<int>(UITheme::getHintRailRightGutter(renderer));
+  const int contentX = railLeft;
+  const int contentWidth = renderer.getScreenWidth() - railLeft - railRight;
   const int contentY = isInverted ? metrics.buttonHintsHeight : 0;
 
   char counter[16] = {};
