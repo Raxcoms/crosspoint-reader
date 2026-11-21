@@ -47,20 +47,20 @@ struct ThemeMetrics {
   // uiScale fonts supply the sizes. Plain data by design — the eventual
   // SD-card theme files will provide exactly these values.
   int listRowGap;          // vertical gap between rows
-  int listRowRadius;       // row corner radius (RoundedRaff cards, Lyra pill)
+  int listRowRadius;       // row corner radius (Lyra pill)
   int listInset;           // horizontal inset of the whole list band
   int listSidePadding;     // text inset within a row
   int listSelectionStyle;  // 0=invert fill, 1=light pill, 2=underline, 3=triangle (fui::SelectionStyle order)
   int listScrollWidth;     // scroll indicator thickness
   int listScrollSide;      // 0 = right edge, 1 = left edge
-  bool listTitleBold;      // bold row titles (RoundedRaff)
+  bool listTitleBold;      // bold row titles
   // FreeInkUI header shape, same contract as the list fields above.
   int headerSidePadding;    // title text inset
   int headerUnderlineSize;  // bottom rule thickness (Lyra), 0 = none
   int headerTitleAlign;     // 0 = left, 1 = center, 2 = right (fui::TextAlign order)
   int headerBatterySide;    // 0 = right edge, 1 = left edge
   // Header clock opt-out for themes whose title layout can't spare the left
-  // reserve (RoundedRaff); the user setting still governs the themes that can.
+  // reserve; the user setting still governs the themes that can.
   bool headerShowsClock = true;
   // Clock slot: centered on the band, or on the left after the back arrow.
   bool headerClockCentered = true;
@@ -69,10 +69,6 @@ struct ThemeMetrics {
 
   int tabSpacing;
   int tabBarHeight;
-  int coverGridTabBarHeight = 72;
-  // Selected-tab pill fills its equal-width slot (legacy RoundedRaff tabs)
-  // instead of shrinking to hug the label (legacy Lyra tabs).
-  bool tabPillFullSlot = false;
 
   int scrollBarWidth;
   int scrollBarRightOffset;
@@ -150,8 +146,8 @@ enum UIIcon {
   Blocks
 };
 
-// Default theme implementation (Classic Theme)
-// Additional themes can inherit from this and override methods as needed
+// Base theme implementation. Lyra derives from it; it is also the fallback
+// used when the Lyra theme cannot be allocated.
 
 namespace BaseMetrics {
 constexpr ThemeMetrics values = {.batteryWidth = 15,
@@ -254,8 +250,7 @@ class BaseTheme {
                             int boxHeight);
   virtual void drawSideButtonHints(const GfxRenderer& renderer, const char* topBtn, const char* bottomBtn) const;
   // Menu row height as DRAWN by drawButtonMenu. HomeActivity builds its touch
-  // grid from this, so hit bands always match the visuals (RoundedRaff derives
-  // its row height from the font, not the metrics table).
+  // grid from this, so hit bands always match the visuals.
   virtual int getMenuRowHeight(const GfxRenderer& renderer) const;
   // Also draws the wall clock opposite the battery when the user enabled
   // SETTINGS.clockShowInHeader and an RTC is present. On touch boards a
@@ -301,9 +296,6 @@ class BaseTheme {
   virtual void drawTextField(const GfxRenderer& renderer, Rect rect, const int textWidth, bool cursorMode = false,
                              int contentStartX = 0, int contentWidth = 0) const;
   virtual bool showsFileIcons() const { return false; }
-  // Thumb generation height for home covers; 0 means use metrics.homeCoverHeight.
-  // Themes with slots wider than 0.6 aspect override this so covers still fill.
-  virtual int homeCoverThumbHeight(const GfxRenderer&) const { return 0; }
 
   // Shared constants and helpers for battery drawing (used by all themes)
   static constexpr int batteryPercentSpacing = 4;
