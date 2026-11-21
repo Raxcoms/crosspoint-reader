@@ -144,6 +144,27 @@ int UITheme::getReaderStatusBarHeight() {
   return getStatusBarHeight() - (BoardConfig::isEegoA4() ? getProgressBarHeight() : 0);
 }
 
+int16_t UITheme::getHintBandBottomInset(const GfxRenderer& renderer) {
+  const auto orientation = renderer.getOrientation();
+  if (orientation == GfxRenderer::Orientation::LandscapeClockwise ||
+      orientation == GfxRenderer::Orientation::LandscapeCounterClockwise) {
+    return 0;  // The rail is a side gutter in landscape, not a bottom band.
+  }
+  return static_cast<int16_t>(getMetrics().buttonHintsHeight);
+}
+
+int16_t UITheme::getHintRailLeftGutter(const GfxRenderer& renderer) {
+  return renderer.getOrientation() == GfxRenderer::Orientation::LandscapeClockwise
+             ? static_cast<int16_t>(getMetrics().buttonHintsHeight)
+             : 0;
+}
+
+int16_t UITheme::getHintRailRightGutter(const GfxRenderer& renderer) {
+  return renderer.getOrientation() == GfxRenderer::Orientation::LandscapeCounterClockwise
+             ? static_cast<int16_t>(getMetrics().buttonHintsHeight)
+             : 0;
+}
+
 // Centered text implementation that takes the safe area into account
 void UITheme::drawCenteredText(const GfxRenderer& renderer, Rect screen, int fontId, int y, const char* text,
                                bool black, EpdFontFamily::Style style) {

@@ -45,6 +45,15 @@ class UITheme {
   static int getStatusBarHeight();
   static int getProgressBarHeight();
   static int getReaderStatusBarHeight();
+  // Portrait button-hint band depth at the bottom edge. In landscape the hints
+  // form a side rail that is already part of the fui safe area (see
+  // UiAppHost::railSafeDeviceContext), so landscape screens must not reserve a
+  // bottom band for it too.
+  static int16_t getHintBandBottomInset(const GfxRenderer& renderer);
+  // Rail depth on the edge the hint rail occupies in landscape (left in
+  // clockwise, right in counter-clockwise); 0 in portrait and on touch boards.
+  static int16_t getHintRailLeftGutter(const GfxRenderer& renderer);
+  static int16_t getHintRailRightGutter(const GfxRenderer& renderer);
 
  private:
   BaseTheme fallbackTheme;

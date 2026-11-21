@@ -153,7 +153,7 @@ void UsbDriveActivity::buildDriveScreen(UiScreen& screen) const {
   const auto& metrics = UITheme::getInstance().getMetrics();
   screen.setContentMarginFromScreen(fui::Insets{
       static_cast<int16_t>(metrics.topPadding + metrics.headerHeight), static_cast<int16_t>(metrics.contentSidePadding),
-      static_cast<int16_t>(metrics.buttonHintsHeight), static_cast<int16_t>(metrics.contentSidePadding)});
+      UITheme::getHintBandBottomInset(renderer), static_cast<int16_t>(metrics.contentSidePadding)});
 
   auto messageStyle = screen.theme().smallText;
   messageStyle.align = fui::TextAlign::Center;
