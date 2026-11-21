@@ -66,7 +66,10 @@ const int verticalPreviewTextPadding = 40;
 }  // namespace
 
 StatusBarSettingsActivity::StatusBarSettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
-    : UiListActivity("StatusBarSettings", renderer, mappedInput) {}
+    : UiListActivity("StatusBarSettings", renderer, mappedInput) {
+  // Style picker with a live preview; the handful of rows never overflow.
+  positionReadout = false;
+}
 
 void StatusBarSettingsActivity::onEnter() {
   UiListActivity::onEnter();

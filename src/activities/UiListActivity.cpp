@@ -5,6 +5,7 @@
 #include <Logging.h>
 
 #include <algorithm>
+#include <cstdio>
 #include <utility>
 
 #include "MappedInputManager.h"
@@ -167,6 +168,20 @@ void UiListActivity::moveSelectionTo(const int index) {
   requestUpdate();
 }
 
+// "12/69" at the bottom-right of the folded content. Anchored by
+// syncListViewport; skipped when this build did not place it.
+void UiListActivity::drawPositionReadout() {
+  if (!positionReadout || readoutY_ < 0) return;
+  const int count = listCount();
+  if (count <= 0) return;
+  const int position = std::max(0, readoutPosition());
+  char buf[24];
+  snprintf(buf, sizeof(buf), "%d/%d", position + 1, count);
+  const int width = renderer.getTextWidth(SMALL_FONT_ID, buf);
+  const int x = readoutRight_ - width - 8;
+  renderer.drawText(SMALL_FONT_ID, x, readoutY_, buf, true);
+}
+
 void UiListActivity::loop() {
   if (handleCustomInput()) return;
 #if FREEINK_CAP_TOUCH
@@ -220,6 +235,22 @@ void UiListActivity::syncListViewport(UiScreen& screen, fui::ListProps& props, c
   const bool trusted = n.trusts(listCount());
   const int drawn = n.drawnRows;
 
+  // Claim the line the position readout paints on so rows never run under it,
+  // then anchor the readout to the folded edge. Anchoring inside the sync (not
+  // in absolute screen coords) keeps it clear of takeBottom reservations like
+  // the bookmarks help line, and the fui safe area already folds in the bezel
+  // and landscape rail gutters.
+  if (positionReadout && listCount() > 0) {
+    constexpr int16_t READOUT_GAP = 4;  // the list's fold sits just above the readout's line box
+    const int16_t reserved = static_cast<int16_t>(renderer.getLineHeight(SMALL_FONT_ID) + READOUT_GAP);
+    screen.insetContent(fui::Insets{0, 0, reserved, 0});
+    const fui::Rect content = screen.contentRect();
+    readoutRight_ = content.right();
+    readoutY_ = static_cast<int16_t>(content.bottom() + READOUT_GAP);
+  } else {
+    readoutY_ = -1;
+  }
+
   screen.syncListViewport(n, props, listCount(), selectionOffset);
 
   // When the selection is already visible in the current viewport (based on
@@ -245,6 +276,7 @@ void UiListActivity::drawChrome() {
 void UiListActivity::drawFooter() {
   const auto labels = mappedInput.mapLabels(tr(STR_BACK), tr(STR_SELECT), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  drawPositionReadout();
 }
 
 void UiListActivity::render(RenderLock&&) {

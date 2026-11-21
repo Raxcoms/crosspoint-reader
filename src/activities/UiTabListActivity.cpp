@@ -95,6 +95,8 @@ void UiTabListActivity::syncTabListViewport(UiScreen& screen, fui::ListProps& pr
   syncListViewport(screen, props, 1);
 }
 
+int UiTabListActivity::readoutPosition() { return std::max(0, activeNav().selected - 1); }
+
 void UiTabListActivity::buildTabBar(UiScreen& screen) {
   const auto& metrics = UITheme::getInstance().getMetrics();
 

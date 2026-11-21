@@ -78,6 +78,8 @@ LibraryListActivity::LibraryListActivity(GfxRenderer& renderer, MappedInputManag
   // Three short tab labels: a full-slot pill would stretch across a third of
   // the screen, so cap it at the label plus padding (slots stay put).
   tabPillMaxPad = 16;
+  // This screen draws its own "n/m books" readout with its reserved line.
+  positionReadout = false;
 }
 
 void LibraryListActivity::onEnter() {

@@ -80,7 +80,10 @@ StrId feedFailureMessage() {
 
 OpdsBookBrowserActivity::OpdsBookBrowserActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                                  OpdsServer server)
-    : CatalogActivity("OpdsBookBrowser", renderer, mappedInput), server(std::move(server)) {}
+    : CatalogActivity("OpdsBookBrowser", renderer, mappedInput), server(std::move(server)) {
+  // Server-side paging: the arrows already show their own "N/M" page counter.
+  positionReadout = false;
+}
 
 void OpdsBookBrowserActivity::onEnter() {
   CatalogActivity::onEnter();

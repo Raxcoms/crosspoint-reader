@@ -648,6 +648,7 @@ void SettingsActivity::drawFooter() {
   const auto labels =
       mappedInput.mapLabels(tr(STR_BACK), picker ? tr(STR_SELECT) : tr(STR_TOGGLE), tr(STR_DIR_UP), tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  drawPositionReadout();
 }
 
 void SettingsActivity::render(RenderLock&& lock) {

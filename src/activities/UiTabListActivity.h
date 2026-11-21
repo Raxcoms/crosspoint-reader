@@ -64,6 +64,9 @@ class UiTabListActivity : public UiListActivity {
   // props.selectedIndex = ring - 1.
   void syncTabListViewport(UiScreen& screen, freeink::ui::ListProps& props);
 
+  // Ring position 0 is the tab band; the readout reports the row index.
+  int readoutPosition() override;
+
   // Per-tab selection/viewport state, sized in onEnter. Protected so subclass
   // tab-switch code can seed the target tab's ring/viewport.
   std::vector<freeink::ui::ListNav> tabNavs;
