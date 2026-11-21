@@ -473,9 +473,8 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
   const auto orientation = renderer.getOrientation();
   const bool centerStatus = orientation == GfxRenderer::Orientation::LandscapeClockwise ||
                             orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
-  freeink::ui::HeaderStatusProps centeredChrome;
+  freeink::ui::HeaderStatusProps centeredChrome = props.status;
   if (centerStatus) {
-    centeredChrome = props.status;
     props.status.showBattery = false;
     props.status.clockText = nullptr;
   }

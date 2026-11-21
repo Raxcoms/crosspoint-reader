@@ -29,9 +29,8 @@ void catalogScreenHeader(UiAppHost::UiScreen& screen, const GfxRenderer& rendere
   const auto orientation = renderer.getOrientation();
   const bool centerStatus = orientation == GfxRenderer::Orientation::LandscapeClockwise ||
                             orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
-  fui::HeaderStatusProps centeredChrome;
+  fui::HeaderStatusProps centeredChrome = header.status;
   if (centerStatus) {
-    centeredChrome = header.status;
     header.status.showBattery = false;
     header.status.clockText = nullptr;
   }
@@ -70,6 +69,9 @@ void catalogScreenHeader(UiAppHost::UiScreen& screen, const GfxRenderer& rendere
   header.sidePadding = theme.headerSidePadding;
   header.minTouchSize = theme.minTouchSize;
   fui::header(screen.frame(), band, header);
+  if (centerStatus) {
+    fui::drawCenteredHeaderStatus(screen.frame(), band, centeredChrome);
+  }
   screen.setContentMarginFromScreen(
       fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing), 0,
                   UITheme::getHintBandBottomInset(renderer), 0});

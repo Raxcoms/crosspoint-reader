@@ -25,9 +25,8 @@ void drawCenteredHeaderStatus(Frame<MaxInteractions>& frame, const Rect& band, c
           target.measureText(status.battery.text.font, status.battery.label, status.battery.text).width);
     }
   }
-  const int16_t clockW = status.clockText
-                             ? target.measureText(status.battery.text.font, status.clockText, status.battery.text).width
-                             : 0;
+  const int16_t clockW =
+      status.clockText ? target.measureText(status.battery.text.font, status.clockText, status.battery.text).width : 0;
   const int16_t groupGap = batteryW > 0 && clockW > 0 ? status.battery.gap : 0;
   const int16_t groupX = static_cast<int16_t>(band.x + (band.width - (batteryW + clockW + groupGap)) / 2);
   if (batteryW > 0) {
