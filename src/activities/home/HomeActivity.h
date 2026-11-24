@@ -72,7 +72,8 @@ class HomeActivity final : public Activity {
   // Rects for the cover and the menu, shared by render and input routing so
   // the touch bands always match what is drawn: portrait stacks the menu
   // below the cover, landscape splits them left/right inside the rail-safe
-  // band.
+  // band (columns split the full height; the menu block is vertically
+  // centered in its column).
   struct HomeContentLayout {
     Rect cover;
     Rect menu;

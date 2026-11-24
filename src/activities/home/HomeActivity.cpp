@@ -326,8 +326,17 @@ HomeActivity::HomeContentLayout HomeActivity::homeContentLayout() const {
   const int bandX = content.x + rail.left;
   const int bandW = content.width - rail.left - rail.right;
   const int colW = bandW / 2;
-  return {Rect{bandX, metrics.homeTopPadding, colW, metrics.homeCoverTileHeight},
-          Rect{bandX + colW, metrics.homeTopPadding, bandW - colW, pageHeight - metrics.homeTopPadding}};
+  const int bandTop = metrics.homeTopPadding;
+  const int bandHeight = pageHeight - bandTop;
+  // Menu rows are vertically centered in their column: the block is the drawn
+  // count of rows, so the touch grid below tracks exactly where they render.
+  const int rowHeight = GUI.getMenuRowHeight(renderer);
+  const int continueReading = metrics.homeContinueReadingInMenu && !recentBooks.empty() ? 1 : 0;
+  const int slot = slotItem() != HomeMenuItem::NONE ? 1 : 0;
+  const int rowCount = 4 + slot + continueReading;
+  const int blockHeight = rowCount * (rowHeight + metrics.menuSpacing) - metrics.menuSpacing;
+  const int menuY = bandTop + (bandHeight - blockHeight) / 2;
+  return {Rect{bandX, bandTop, colW, bandHeight}, Rect{bandX + colW, menuY, bandW - colW, blockHeight}};
 }
 
 void HomeActivity::render(RenderLock&&) {
@@ -362,6 +371,13 @@ void HomeActivity::render(RenderLock&&) {
 
   GUI.drawRecentBookCover(renderer, layout.cover, recentBooks, selectorIndex, coverRendered, coverBufferStored,
                           bufferRestored, std::bind(&HomeActivity::storeCoverBuffer, this));
+
+  // Divider between the cover column and the menu column (landscape split).
+  // It runs from the header rule down, never crossing either divider.
+  if (UITheme::isLandscape(renderer)) {
+    const int pageHeight = renderer.getScreenHeight();
+    renderer.fillRect(layout.menu.x - 3, metrics.homeTopPadding, 3, pageHeight - metrics.homeTopPadding, true);
+  }
 
   // Build menu items dynamically
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_LIBRARY), tr(STR_FILE_TRANSFER),

@@ -256,10 +256,11 @@ void LyraTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
   // Only load from SD on first render, then use stored buffer
   if (hasContinueReading) {
     RecentBook book = recentBooks[0];
+    int tileX = rect.x + LyraMetrics::values.contentSidePadding;
+    int boxX = tileX + hPaddingInSelection;
     if (!coverRendered) {
       std::string coverPath = book.coverBmpPath;
       bool hasCover = true;
-      int tileX = rect.x + LyraMetrics::values.contentSidePadding;
       if (coverPath.empty()) {
         hasCover = false;
       } else {
@@ -271,11 +272,15 @@ void LyraTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
           Bitmap bitmap(file);
           if (bitmap.parseHeaders() == BmpReaderError::Ok) {
             coverWidth = bitmap.getWidth();
+            // Landscape centers the cover in the full-height column.
+            if (UITheme::isLandscape(renderer)) {
+              boxX = rect.x + (rect.width - coverWidth) / 2;
+            }
             // Narrow covers come out taller than the slot; fill 1:1 and crop
             // vertically instead of rescaling the dither.
-            drawCoverThumbFill(renderer, bitmap,
-                               Rect{tileX + hPaddingInSelection, tileY + hPaddingInSelection, coverWidth,
-                                    LyraMetrics::values.homeCoverHeight});
+            drawCoverThumbFill(
+                renderer, bitmap,
+                Rect{boxX, tileY + hPaddingInSelection, coverWidth, LyraMetrics::values.homeCoverHeight});
           } else {
             hasCover = false;
           }
@@ -283,35 +288,60 @@ void LyraTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
         }
       }
 
-      // Draw either way
-      renderer.drawRect(tileX + hPaddingInSelection, tileY + hPaddingInSelection, coverWidth,
-                        LyraMetrics::values.homeCoverHeight, true);
+      // Draw the box either way; coverWidth is final at this point.
+      if (UITheme::isLandscape(renderer)) {
+        boxX = rect.x + (rect.width - coverWidth) / 2;
+      }
+      renderer.drawRect(boxX, tileY + hPaddingInSelection, coverWidth, LyraMetrics::values.homeCoverHeight, true);
 
       if (!hasCover) {
-        drawCoverPlaceholder(renderer, Rect{tileX + hPaddingInSelection, tileY + hPaddingInSelection, coverWidth,
-                                            LyraMetrics::values.homeCoverHeight});
+        drawCoverPlaceholder(renderer,
+                             Rect{boxX, tileY + hPaddingInSelection, coverWidth, LyraMetrics::values.homeCoverHeight});
       }
 
       coverBufferStored = storeCoverBuffer();
       coverRendered = coverBufferStored;  // Only consider it rendered if we successfully stored the buffer
+    } else {
+      // Buffer restored: boxX is final from the static coverWidth.
+      if (UITheme::isLandscape(renderer)) {
+        boxX = rect.x + (rect.width - coverWidth) / 2;
+      }
     }
 
     bool bookSelected = (selectorIndex == 0);
 
-    int tileX = rect.x + LyraMetrics::values.contentSidePadding;
+    const bool landscape = UITheme::isLandscape(renderer);
     int textWidth = tileWidth - 2 * hPaddingInSelection - LyraMetrics::values.verticalSpacing - coverWidth;
+    int textX = tileX + hPaddingInSelection + coverWidth + LyraMetrics::values.verticalSpacing;
+    if (landscape) {
+      // Landscape: title and author use the full column width, below the cover.
+      textWidth = tileWidth;
+      textX = tileX;
+    }
 
     if (bookSelected) {
-      // Draw selection box
-      renderer.fillRoundedRect(tileX, tileY, tileWidth, hPaddingInSelection, cornerRadius, true, true, false, false,
-                               Color::LightGray);
-      renderer.fillRectDither(tileX, tileY + hPaddingInSelection, hPaddingInSelection,
-                              LyraMetrics::values.homeCoverHeight, Color::LightGray);
-      renderer.fillRectDither(tileX + hPaddingInSelection + coverWidth, tileY + hPaddingInSelection,
-                              tileWidth - hPaddingInSelection - coverWidth, LyraMetrics::values.homeCoverHeight,
-                              Color::LightGray);
-      renderer.fillRoundedRect(tileX, tileY + LyraMetrics::values.homeCoverHeight + hPaddingInSelection, tileWidth,
-                               hPaddingInSelection, cornerRadius, false, false, true, true, Color::LightGray);
+      if (landscape) {
+        // Wrap the centered box only.
+        renderer.fillRoundedRect(boxX, tileY, coverWidth, hPaddingInSelection, cornerRadius, true, true, false, false,
+                                 Color::LightGray);
+        renderer.fillRectDither(boxX, tileY + hPaddingInSelection, hPaddingInSelection,
+                                LyraMetrics::values.homeCoverHeight, Color::LightGray);
+        renderer.fillRectDither(boxX + coverWidth - hPaddingInSelection, tileY + hPaddingInSelection,
+                                hPaddingInSelection, LyraMetrics::values.homeCoverHeight, Color::LightGray);
+        renderer.fillRoundedRect(boxX, tileY + LyraMetrics::values.homeCoverHeight + hPaddingInSelection, coverWidth,
+                                 hPaddingInSelection, cornerRadius, false, false, true, true, Color::LightGray);
+      } else {
+        // Draw selection box
+        renderer.fillRoundedRect(tileX, tileY, tileWidth, hPaddingInSelection, cornerRadius, true, true, false, false,
+                                 Color::LightGray);
+        renderer.fillRectDither(tileX, tileY + hPaddingInSelection, hPaddingInSelection,
+                                LyraMetrics::values.homeCoverHeight, Color::LightGray);
+        renderer.fillRectDither(tileX + hPaddingInSelection + coverWidth, tileY + hPaddingInSelection,
+                                tileWidth - hPaddingInSelection - coverWidth, LyraMetrics::values.homeCoverHeight,
+                                Color::LightGray);
+        renderer.fillRoundedRect(tileX, tileY + LyraMetrics::values.homeCoverHeight + hPaddingInSelection, tileWidth,
+                                 hPaddingInSelection, cornerRadius, false, false, true, true, Color::LightGray);
+      }
     }
 
     auto titleLines = renderer.wrappedText(UI_12_FONT_ID, book.title.c_str(), textWidth, 3, EpdFontFamily::BOLD);
