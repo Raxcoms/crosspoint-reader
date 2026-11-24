@@ -467,14 +467,29 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
   props.subtitleText = tokens.smallText;
   props.styles = tokens.popup;
   props.sidePadding = tokens.headerSidePadding;
-  // Underline only under a titled header: an untitled band (Lyra home screen)
-  // historically drew no rule, and the old themes keyed the line on the title.
-  if (title != nullptr && props.styles.normal.border.kind == fui::PaintKind::None && tokens.headerUnderline > 0) {
+  // The underline spans the whole band on every screen: it divides the header
+  // chrome from the content below (an untitled band gets it too).
+  if (props.styles.normal.border.kind == fui::PaintKind::None && tokens.headerUnderline > 0) {
     props.styles.normal.border = fui::Paint::solid(fui::Color::Black);
     props.styles.normal.borderWidth = tokens.headerUnderline;
   }
   fui::header(ui.frame, band, props);
   fui::drawCenteredHeaderStatus(ui.frame, band, centeredChrome);
+
+  // The rail is a full-height strip on the edge; the divider along its content
+  // edge runs from this rule to the screen bottom, so the two dividers never
+  // cross. It stays outside the strip (the rail is painted on top later).
+  if (rail.left > 0 || rail.right > 0) {
+    constexpr int dividerWidth = 3;
+    const int dividerY = band.y + band.height;
+    const int dividerHeight = renderer.getScreenHeight() - dividerY;
+    if (dividerHeight > 0) {
+      // Drawn on the content side of the edge so the rail fill (painted after
+      // the header) never covers it.
+      const int dividerX = rail.left > 0 ? band.x : band.x + band.width - dividerWidth;
+      renderer.fillRect(dividerX, dividerY, dividerWidth, dividerHeight, true);
+    }
+  }
 }
 
 void BaseTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char* label, const char* rightLabel) const {
