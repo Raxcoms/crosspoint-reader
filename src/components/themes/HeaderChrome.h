@@ -1,17 +1,28 @@
 #pragma once
 // Helpers for header status chrome that the fui header cannot place itself.
 #include <FreeInkUICore.h>
+#include <components/UITheme.h>
 #include <components/bars/battery-indicator.h>
 #include <components/controls/header.h>
 
 namespace freeink {
 namespace ui {
 
-// In landscape the button-hint rail sits over the edge corners where the fui
-// header pins the battery and clock. BaseTheme draws those as one group
-// centered on the status strip instead; pass the filled status props that were
-// withheld from the header. Placement mirrors the header component's own
-// measurements so chrome placement stays consistent across screens.
+// Withhold the battery/clock chrome in landscape (the hint rail sits over the
+// edge corners where the fui header pins them) so the caller can redraw it
+// centered on the rail-safe band. Returns what was withheld (empty in
+// portrait), mutating the props the header will render with.
+inline HeaderStatusProps withholdCenteredStatus(const GfxRenderer& renderer, HeaderProps& header) {
+  if (!UITheme::isLandscape(renderer)) return HeaderStatusProps{};
+  const auto withheld = header.status;
+  header.status.showBattery = false;
+  header.status.clockText = nullptr;
+  return withheld;
+}
+
+// The centered status group sits on the rail-safe band, so it centers on the
+// screen's usable area, not the full-bleed band the header draws. Pass the band
+// the header actually drew (rail-safe) so placement stays consistent.
 template <size_t MaxInteractions>
 void drawCenteredHeaderStatus(Frame<MaxInteractions>& frame, const Rect& band, const HeaderStatusProps& status) {
   if (!status.showBattery && !status.clockText) return;

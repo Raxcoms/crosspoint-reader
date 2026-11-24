@@ -290,8 +290,9 @@ void EpubReaderBookmarksActivity::render(RenderLock&&) {
   // Inverted portrait: reserve vertical space for hints at the top.
   const bool isPortraitInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
   // Landscape: the hint rail occupies one edge, left for CW and right for CCW.
-  const int railLeft = static_cast<int>(UITheme::getHintRailLeftGutter(renderer));
-  const int railRight = static_cast<int>(UITheme::getHintRailRightGutter(renderer));
+  const auto rail = UITheme::getHintRails(renderer);
+  const int railLeft = rail.left;
+  const int railRight = rail.right;
   const int contentX = railLeft;
   const int contentWidth = pageWidth - railLeft - railRight;
   const int contentY = isPortraitInverted ? 50 : 0;

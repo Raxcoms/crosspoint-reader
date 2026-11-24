@@ -54,6 +54,14 @@ class UITheme {
   // clockwise, right in counter-clockwise); 0 in portrait and on touch boards.
   static int16_t getHintRailLeftGutter(const GfxRenderer& renderer);
   static int16_t getHintRailRightGutter(const GfxRenderer& renderer);
+  static bool isLandscape(const GfxRenderer& renderer);
+  // Both rail gutters at once (both 0 in portrait), for screens that reserve
+  // the whole rail. getHintRailLeftGutter/RightGutter stay for single-edge needs.
+  struct HintRails {
+    int16_t left = 0;
+    int16_t right = 0;
+  };
+  static HintRails getHintRails(const GfxRenderer& renderer);
 
  private:
   BaseTheme fallbackTheme;

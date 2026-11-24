@@ -25,8 +25,9 @@ freeink::ui::DeviceContext UiAppHost::railSafeDeviceContext() const {
   // In landscape the four button-hint boxes form a rail on the button edge;
   // fold that gutter into the safe area so fui bodies, lists and popups stop
   // short of it instead of drawing under it.
-  device.safeArea.left += UITheme::getHintRailLeftGutter(gfxRenderer);
-  device.safeArea.right += UITheme::getHintRailRightGutter(gfxRenderer);
+  const auto rail = UITheme::getHintRails(gfxRenderer);
+  device.safeArea.left += rail.left;
+  device.safeArea.right += rail.right;
   return device;
 }
 

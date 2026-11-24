@@ -25,6 +25,9 @@ void UITheme::reload() {
   auto theme = makeUniqueNoThrow<LyraTheme>();
   if (!theme) {
     LOG_ERR("UI", "OOM: Lyra theme");
+    // No LyraTheme means Lyra metrics are unreadable too: leave the previous
+    // cache untouched rather than half-assign. getTheme()/getMetrics() then
+    // still serve the BaseMetrics fallback, which is what an OOM boot gets.
     return;
   }
   currentTheme = std::move(theme);
@@ -144,10 +147,18 @@ int UITheme::getReaderStatusBarHeight() {
   return getStatusBarHeight() - (BoardConfig::isEegoA4() ? getProgressBarHeight() : 0);
 }
 
-int16_t UITheme::getHintBandBottomInset(const GfxRenderer& renderer) {
+bool UITheme::isLandscape(const GfxRenderer& renderer) {
   const auto orientation = renderer.getOrientation();
-  if (orientation == GfxRenderer::Orientation::LandscapeClockwise ||
-      orientation == GfxRenderer::Orientation::LandscapeCounterClockwise) {
+  return orientation == GfxRenderer::Orientation::LandscapeClockwise ||
+         orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
+}
+
+UITheme::HintRails UITheme::getHintRails(const GfxRenderer& renderer) {
+  return {getHintRailLeftGutter(renderer), getHintRailRightGutter(renderer)};
+}
+
+int16_t UITheme::getHintBandBottomInset(const GfxRenderer& renderer) {
+  if (isLandscape(renderer)) {
     return 0;  // The rail is a side gutter in landscape, not a bottom band.
   }
   return static_cast<int16_t>(getInstance().getMetrics().buttonHintsHeight);

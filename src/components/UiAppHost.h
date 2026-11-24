@@ -73,8 +73,15 @@ class UiAppHost {
  private:
   // fui device context with the landscape hint-rail gutter folded into the
   // safe area, so every FUI screen lays out clear of the side button boxes.
+  // Asymmetric with portrait: the portrait hint band is NOT folded into the
+  // safe area - every screen reserves it by hand via getHintBandBottomInset().
+  // Call from renderUi(); routing reads the published context from the last render.
   freeink::ui::DeviceContext railSafeDeviceContext() const;
 
+  // Not reachable via uiTarget's public API (GfxRendererTarget stores the
+  // renderer privately), so the one stored reference is what railSafe
+  // uses for orientation/metrics. The renderer outlives the host by
+  // construction order on the stack.
   const GfxRenderer& gfxRenderer;
   // Opened by the render task after publication and closed on lifecycle/state
   // resets; read by the loop task (route*).

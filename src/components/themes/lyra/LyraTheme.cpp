@@ -112,8 +112,7 @@ void LyraTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   }
 
   const GfxRenderer::Orientation orig_orientation = renderer.getOrientation();
-  const bool landscape =
-      orig_orientation == GfxRenderer::LandscapeClockwise || orig_orientation == GfxRenderer::LandscapeCounterClockwise;
+  const bool landscape = UITheme::isLandscape(renderer);
 
   constexpr int buttonWidth = 80;
   constexpr int smallButtonHeight = 15;
@@ -168,7 +167,7 @@ void LyraTheme::drawButtonHintsLandscapeLyra(const GfxRenderer& renderer, const 
   const int screenHeight = renderer.getScreenHeight();
   const bool clockwise = renderer.getOrientation() == GfxRenderer::LandscapeClockwise;
   // Mirror the portrait band's panel footprint so each rail box sits over its
-  // physical button, same as BaseTheme::drawButtonHintsLandscape.
+  // physical button.
   const int hintWidth = buttonHeight;  // depth into the screen
   const int boxSpan = buttonWidth;     // extent along the screen edge
   const int edgeX = clockwise ? 0 : screenWidth - hintWidth;

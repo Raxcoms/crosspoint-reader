@@ -705,8 +705,9 @@ void DictionaryDefinitionActivity::render(RenderLock&&) {
   const auto orientation = renderer.getOrientation();
   const bool isInverted = orientation == GfxRenderer::Orientation::PortraitInverted;
   // The header band stops short of the landscape hint rail on its edge.
-  const int railLeft = static_cast<int>(UITheme::getHintRailLeftGutter(renderer));
-  const int railRight = static_cast<int>(UITheme::getHintRailRightGutter(renderer));
+  const auto rail = UITheme::getHintRails(renderer);
+  const int railLeft = rail.left;
+  const int railRight = rail.right;
   const int contentX = railLeft;
   const int contentWidth = renderer.getScreenWidth() - railLeft - railRight;
   const int contentY = isInverted ? metrics.buttonHintsHeight : 0;

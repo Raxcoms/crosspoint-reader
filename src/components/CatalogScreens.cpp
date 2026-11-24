@@ -26,20 +26,16 @@ void catalogScreenHeader(UiAppHost::UiScreen& screen, const GfxRenderer& rendere
   // heights are unified across themes, so the buttons derive from the band.
   GUI.applyHeaderStatus(renderer, header);
   // Landscape: the hint rail covers the corners the header pins its status to,
-  // so withhold that chrome and draw it centered after the band.
-  const auto orientation = renderer.getOrientation();
-  const bool centerStatus = orientation == GfxRenderer::Orientation::LandscapeClockwise ||
-                            orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
-  fui::HeaderStatusProps centeredChrome = header.status;
-  if (centerStatus) {
-    header.status.showBattery = false;
-    header.status.clockText = nullptr;
-  }
-  const auto frameRect = screen.frame().screen();
-  const fui::Rect band = BaseTheme::headerBand(renderer,
-                                               fui::Rect{frameRect.x, static_cast<int16_t>(metrics.topPadding),
-                                                         frameRect.width, static_cast<int16_t>(metrics.headerHeight)},
-                                               header);
+  // so withhold that chrome and draw it centered on the rail-safe band after
+  // the band. The band is folded the same way so the whole header stays clear
+  // of the rail.
+  const auto centeredChrome = fui::withholdCenteredStatus(renderer, header);
+  const auto frameRectScreen = screen.frame().screen();
+  const auto rail = UITheme::getHintRails(renderer);
+  const auto bandRect = fui::Rect{
+      static_cast<int16_t>(frameRectScreen.x + rail.left), static_cast<int16_t>(metrics.topPadding),
+      static_cast<int16_t>(frameRectScreen.width - rail.left - rail.right), static_cast<int16_t>(metrics.headerHeight)};
+  const fui::Rect band = BaseTheme::headerBand(renderer, bandRect, header);
   // Back button on touch boards, as on every GUI.drawHeader screen: the rect
   // goes to HeaderBackTapTarget, which MappedInputManager folds into
   // Button::Back, so each page's own Back handling applies (leaving a list,
@@ -70,9 +66,7 @@ void catalogScreenHeader(UiAppHost::UiScreen& screen, const GfxRenderer& rendere
   header.sidePadding = theme.headerSidePadding;
   header.minTouchSize = theme.minTouchSize;
   fui::header(screen.frame(), band, header);
-  if (centerStatus) {
-    fui::drawCenteredHeaderStatus(screen.frame(), band, centeredChrome);
-  }
+  fui::drawCenteredHeaderStatus(screen.frame(), band, centeredChrome);
   screen.setContentMarginFromScreen(
       fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing), 0,
                   UITheme::getHintBandBottomInset(renderer), 0});
