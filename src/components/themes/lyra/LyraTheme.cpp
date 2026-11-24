@@ -314,7 +314,8 @@ void LyraTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     int textWidth = tileWidth - 2 * hPaddingInSelection - LyraMetrics::values.verticalSpacing - coverWidth;
     int textX = tileX + hPaddingInSelection + coverWidth + LyraMetrics::values.verticalSpacing;
     if (landscape) {
-      // Landscape: title and author use the full column width, below the cover.
+      // Landscape: title and author use the full column width, anchored to the
+      // column bottom so they stay clear of the top cover.
       textWidth = tileWidth;
       textX = tileX;
     }
@@ -351,7 +352,8 @@ void LyraTheme::drawRecentBookCover(GfxRenderer& renderer, Rect rect, const std:
     const int titleBlockHeight = titleLineHeight * static_cast<int>(titleLines.size());
     const int authorHeight = book.author.empty() ? 0 : (renderer.getLineHeight(UI_10_FONT_ID) * 3 / 2);
     const int totalBlockHeight = titleBlockHeight + authorHeight;
-    int titleY = tileY + tileHeight / 2 - totalBlockHeight / 2;
+    int titleY = landscape ? tileY + tileHeight - LyraMetrics::values.verticalSpacing - totalBlockHeight
+                           : tileY + tileHeight / 2 - totalBlockHeight / 2;
     for (const auto& line : titleLines) {
       renderer.drawText(UI_12_FONT_ID, textX, titleY, line.c_str(), true, EpdFontFamily::BOLD);
       titleY += titleLineHeight;
