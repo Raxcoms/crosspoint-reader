@@ -67,6 +67,9 @@ void catalogScreenHeader(UiAppHost::UiScreen& screen, const GfxRenderer& rendere
   header.minTouchSize = theme.minTouchSize;
   fui::header(screen.frame(), band, header);
   fui::drawCenteredHeaderStatus(screen.frame(), band, centeredChrome);
+  // Catalog screens draw their own header band, so they get the same rail
+  // divider as BaseTheme::drawHeader.
+  fui::drawHeaderRailDivider(renderer, band, rail);
   screen.setContentMarginFromScreen(
       fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing), 0,
                   UITheme::getHintBandBottomInset(renderer), 0});

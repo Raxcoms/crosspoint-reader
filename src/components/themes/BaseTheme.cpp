@@ -476,20 +476,9 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
   fui::header(ui.frame, band, props);
   fui::drawCenteredHeaderStatus(ui.frame, band, centeredChrome);
 
-  // The rail is a full-height strip on the edge; the divider along its content
-  // edge runs from this rule to the screen bottom, so the two dividers never
-  // cross. It stays outside the strip (the rail is painted on top later).
-  if (rail.left > 0 || rail.right > 0) {
-    constexpr int dividerWidth = 3;
-    const int dividerY = band.y + band.height;
-    const int dividerHeight = renderer.getScreenHeight() - dividerY;
-    if (dividerHeight > 0) {
-      // Drawn on the content side of the edge so the rail fill (painted after
-      // the header) never covers it.
-      const int dividerX = rail.left > 0 ? band.x : band.x + band.width - dividerWidth;
-      renderer.fillRect(dividerX, dividerY, dividerWidth, dividerHeight, true);
-    }
-  }
+  // Rail divider from this rule to the screen bottom. Shared with the catalog
+  // header so every landscape screen gets the same edge.
+  fui::drawHeaderRailDivider(renderer, band, rail);
 }
 
 void BaseTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char* label, const char* rightLabel) const {

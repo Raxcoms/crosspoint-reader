@@ -52,5 +52,19 @@ void drawCenteredHeaderStatus(Frame<MaxInteractions>& frame, const Rect& band, c
   }
 }
 
+// The landscape hint rail is a full-height strip on the screen edge. This
+// divider runs along the rail content edge from the header bottom rule to the
+// screen bottom, meeting the rule at the corner without crossing it. It is
+// drawn on the content side so the rail fill (painted later) never covers it.
+inline void drawHeaderRailDivider(const GfxRenderer& renderer, const Rect& band, const UITheme::HintRails& rail) {
+  if (rail.left == 0 && rail.right == 0) return;
+  constexpr int dividerWidth = 3;
+  const int dividerY = band.y + band.height;
+  const int dividerHeight = renderer.getScreenHeight() - dividerY;
+  if (dividerHeight <= 0) return;
+  const int dividerX = rail.left > 0 ? band.x : band.x + band.width - dividerWidth;
+  renderer.fillRect(dividerX, dividerY, dividerWidth, dividerHeight, true);
+}
+
 }  // namespace ui
 }  // namespace freeink
