@@ -66,7 +66,10 @@ const int verticalPreviewTextPadding = 40;
 }  // namespace
 
 StatusBarSettingsActivity::StatusBarSettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput)
-    : UiListActivity("StatusBarSettings", renderer, mappedInput) {}
+    : UiListActivity("StatusBarSettings", renderer, mappedInput) {
+  // Style picker with a live preview; the handful of rows never overflow.
+  positionReadout = false;
+}
 
 void StatusBarSettingsActivity::onEnter() {
   UiListActivity::onEnter();
@@ -189,8 +192,9 @@ void StatusBarSettingsActivity::buildScreen(UiScreen& screen) {
   const int statusBarHeight = UITheme::getInstance().getStatusBarHeight();
   const auto previewFooter =
       static_cast<int16_t>(statusBarHeight + verticalPreviewTextPadding + metrics.verticalSpacing);
-  screen.setContentMarginFromScreen(fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight), 0,
-                                                static_cast<int16_t>(metrics.buttonHintsHeight + previewFooter), 0});
+  screen.setContentMarginFromScreen(
+      fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight), 0,
+                  static_cast<int16_t>(UITheme::getHintBandBottomInset(renderer) + previewFooter), 0});
   screen.spacer(static_cast<int16_t>(metrics.verticalSpacing));
 
   // rowItems_'s labels/actionValue were set once in onEnter(); only the live

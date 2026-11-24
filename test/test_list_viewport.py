@@ -15,15 +15,23 @@ harness = r"""
 #include <components/lists/list.h>
 #include <cassert>
 namespace fui = freeink::ui;
+constexpr int SMALL_FONT_ID = 0;
 struct UiScreen {
   int16_t height = 80;
+  int16_t reserved = 0;
+  // Mirrors the real fui Screen: insetContent shrinks the content rect.
+  void insetContent(fui::Insets i) { reserved = i.bottom; }
+  fui::Rect contentRect() const { return fui::Rect{0, 0, 200, height - reserved}; }
   void syncListViewport(fui::ListNav& nav, fui::ListProps& props, int count, int offset) {
-    nav.syncToProps({0, 0, 200, height}, 20, 0, count, props, offset);
+    nav.syncToProps({0, 0, 200, height - reserved}, 20, 0, count, props, offset);
   }
 };
 struct UiListActivity {
   fui::ListNav nav;
   int count = 16;
+  bool positionReadout = true;
+  int16_t readoutRight_ = 0, readoutY_ = -1;
+  struct { int getLineHeight(int) const { return 20; } } renderer;
   fui::ListNav& activeNav() { return nav; }
   int listCount() const { return count; }
   void syncListViewport(UiScreen&, fui::ListProps&, int = 0);
@@ -41,6 +49,10 @@ int main() {
     nav.requestScroll(4);
     activity.syncListViewport(screen, props, offset);
     assert(nav.top == 4 && props.topIndex == 4 && nav.selected == offset);
+    // The readout line is reserved and anchored below the folded content:
+    // lineHeight 20 + 4px gap = 24px reserved, anchor just below the fold.
+    assert(activity.readoutY_ == 80 - 24 + 4);
+    assert(activity.readoutRight_ == 200);
     nav.onListRendered(4, 4, false);
     nav.selected = 5 + offset;
     nav.requestScroll(-4);

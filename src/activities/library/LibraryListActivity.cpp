@@ -78,6 +78,8 @@ LibraryListActivity::LibraryListActivity(GfxRenderer& renderer, MappedInputManag
   // Three short tab labels: a full-slot pill would stretch across a third of
   // the screen, so cap it at the label plus padding (slots stay put).
   tabPillMaxPad = 16;
+  // This screen draws its own "n/m books" readout with its reserved line.
+  positionReadout = false;
 }
 
 void LibraryListActivity::onEnter() {
@@ -1011,7 +1013,7 @@ void LibraryListActivity::buildScreen(UiScreen& screen) {
   buildHeader(screen);
   screen.setContentMarginFromScreen(
       fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight), 0,
-                  static_cast<int16_t>(bottomInset + metrics.buttonHintsHeight + readoutReserved), 0});
+                  static_cast<int16_t>(bottomInset + UITheme::getHintBandBottomInset(renderer) + readoutReserved), 0});
 
   if (!degraded) buildTabBar(screen);
   if (bookRowCount() == 0) {
@@ -1042,13 +1044,14 @@ void LibraryListActivity::drawPositionReadout() const {
   char buf[32];
   const char* positionFormat = groupsCollapsed ? tr(STR_LIBRARY_GROUP_POSITION) : tr(STR_LIBRARY_POSITION);
   snprintf(buf, sizeof(buf), positionFormat, selectedEntry() + 1, count);
-  const auto& metrics = UITheme::getInstance().getMetrics();
   const int width = renderer.getTextWidth(SMALL_FONT_ID, buf);
   // Bottom-right of the viewable area, clear of the bezel and rounded corner.
   const Rect area = UITheme::getContentArea(renderer);
-  const int right = std::max(renderer.getScreenWidth() - area.x - area.width, bottomCornerClearance());
+  const int right = std::max(renderer.getScreenWidth() - area.x - area.width, bottomCornerClearance()) +
+                    UITheme::getHintRailRightGutter(renderer);
   const int x = renderer.getScreenWidth() - right - width - SIDE_PADDING;
-  const int y = area.y + area.height - metrics.buttonHintsHeight - renderer.getLineHeight(SMALL_FONT_ID);
+  const int y =
+      area.y + area.height - UITheme::getHintBandBottomInset(renderer) - renderer.getLineHeight(SMALL_FONT_ID);
   renderer.drawText(SMALL_FONT_ID, x, y, buf, true);
 }
 
@@ -1070,11 +1073,10 @@ void LibraryListActivity::drawHoldHelp() const {
     help = tr(STR_LIBRARY_HOLD_GROUPS);
   if (!help) return;
 
-  const auto& metrics = UITheme::getInstance().getMetrics();
   const int lineHeight = renderer.getLineHeight(SMALL_FONT_ID);
   const Rect area = UITheme::getContentArea(renderer);
-  const int left = std::max(area.x, bottomCornerClearance());
-  const int y = area.y + area.height - metrics.buttonHintsHeight - lineHeight;
+  const int left = std::max(area.x, bottomCornerClearance()) + UITheme::getHintRailLeftGutter(renderer);
+  const int y = area.y + area.height - UITheme::getHintBandBottomInset(renderer) - lineHeight;
   GUI.drawHelpText(renderer,
                    Rect{left + SIDE_PADDING, y, renderer.getScreenWidth() / 2 - left - SIDE_PADDING, lineHeight}, help);
 }

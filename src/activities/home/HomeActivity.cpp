@@ -7,8 +7,6 @@
 #include <HalDisplay.h>
 #include <HalStorage.h>
 #include <I18n.h>
-#include <LibraryBuilder.h>
-#include <LibraryIndexFile.h>
 #include <Memory.h>
 #include <Utf8.h>
 #include <Xtc.h>
@@ -23,6 +21,7 @@
 #include "MappedInputManager.h"
 #include "OpdsServerStore.h"
 #include "RecentBooksStore.h"
+#include "activities/reader/ReaderUtils.h"
 #include "components/UITheme.h"
 #include "fontIds.h"
 
@@ -40,7 +39,7 @@ int HomeActivity::getMenuItemCount() const {
 void HomeActivity::loadRecentBooks(int maxBooks) {
   recentBooks.clear();
   const auto& books = RECENT_BOOKS.getBooks();
-  recentBooks.reserve(coverGridUi ? maxBooks : std::min(static_cast<int>(books.size()), maxBooks));
+  recentBooks.reserve(std::min(static_cast<int>(books.size()), maxBooks));
 
   for (const RecentBook& book : books) {
     // Limit to maximum number of recent books
@@ -57,109 +56,6 @@ void HomeActivity::loadRecentBooks(int maxBooks) {
   }
 }
 
-void HomeActivity::fillCoverGridFromLibrary() {
-  if (recentBooks.size() >= CoverGridHomeUi::MAX_BOOKS) return;
-  // Keep the index and record together off the task stack; reuse for every row.
-  struct LibraryReader {
-    library::LibraryIndexFile index;
-    library::ClixRecord record;
-  };
-  auto reader = makeUniqueNoThrow<LibraryReader>();
-  if (!reader) {
-    LOG_ERR("HOME", "OOM: library index");
-    return;
-  }
-  auto& index = reader->index;
-  auto& record = reader->record;
-  if (!index.open(library::libraryIndexPath())) {
-    index.close();
-    GUI.drawPopup(renderer, tr(STR_LIBRARY_REBUILDING));
-    library::BuildStats stats;
-    if (!library::buildLibraryIndex("/", stats, SETTINGS.libraryUseMetadata != 0) ||
-        !index.open(library::libraryIndexPath())) {
-      LOG_ERR("HOME", "Cannot populate cover grid from library");
-      return;
-    }
-  }
-  for (uint16_t row = 0; row < index.bookCount() && recentBooks.size() < CoverGridHomeUi::MAX_BOOKS; ++row) {
-    RecentBook book;
-    if (!index.readRecord(index.ordinalForRow(library::SortOrder::RecentDesc, row), record) ||
-        !index.readPath(record, book.path))
-      continue;
-    if (std::any_of(recentBooks.begin(), recentBooks.end(),
-                    [&](const RecentBook& existing) { return existing.path == book.path; }) ||
-        RecentBooksStore::isMissing(book))
-      continue;
-    if (!index.readTitle(record, book.title) && !index.readName(record, book.title)) continue;
-    index.readAuthor(record, book.author);
-    if (index.ioFailed()) break;
-    recentBooks.push_back(std::move(book));
-  }
-}
-
-void HomeActivity::resolveGridCoverPaths() {
-  for (auto& book : recentBooks) {
-    if (!book.coverBmpPath.empty()) continue;
-    // Constructors only derive cache paths; no metadata parsing or image generation.
-    // Keep these large objects off the task stack and release each before the next book.
-    if (FsHelpers::hasReflowableBookExtension(book.path)) {
-      auto epub = makeUniqueNoThrow<Epub>(book.path, "/.crosspoint");
-      if (!epub) {
-        LOG_ERR("HOME", "OOM: EPUB thumbnail path");
-        continue;
-      }
-      book.coverBmpPath = epub->getThumbBmpPath();
-    } else if (FsHelpers::hasXtcExtension(book.path)) {
-      auto xtc = makeUniqueNoThrow<Xtc>(book.path, "/.crosspoint");
-      if (!xtc) {
-        LOG_ERR("HOME", "OOM: XTC thumbnail path");
-        continue;
-      }
-      book.coverBmpPath = xtc->getThumbBmpPath();
-    }
-  }
-}
-
-void HomeActivity::loadGridCover(RecentBook& book, int height, bool& showingLoading, Rect& popupRect) {
-  if (!book.coverBmpPath.empty() && Storage.exists(UITheme::getCoverThumbPath(book.coverBmpPath, height).c_str()))
-    return;
-  // Only one parser lives at a time; EPUB/XTC objects exceed the stack budget.
-  if (FsHelpers::hasReflowableBookExtension(book.path)) {
-    auto epub = makeUniqueNoThrow<Epub>(book.path, "/.crosspoint");
-    if (!epub) {
-      LOG_ERR("HOME", "OOM: cover EPUB");
-      return;
-    }
-    book.coverBmpPath = epub->getThumbBmpPath();
-    if (Storage.exists(epub->getThumbBmpPath(height).c_str())) return;
-    if (!showingLoading) {
-      showingLoading = true;
-      popupRect = GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
-      GUI.fillPopupProgress(renderer, popupRect, 0);
-    }
-    if (epub->generateThumbBmpFromSource(height)) {
-      return;
-    }
-  } else if (FsHelpers::hasXtcExtension(book.path)) {
-    auto xtc = makeUniqueNoThrow<Xtc>(book.path, "/.crosspoint");
-    if (!xtc) {
-      LOG_ERR("HOME", "OOM: cover XTC");
-      return;
-    }
-    book.coverBmpPath = xtc->getThumbBmpPath();
-    if (Storage.exists(xtc->getThumbBmpPath(height).c_str())) return;
-    if (!showingLoading) {
-      showingLoading = true;
-      popupRect = GUI.drawPopup(renderer, tr(STR_LOADING_POPUP));
-      GUI.fillPopupProgress(renderer, popupRect, 0);
-    }
-    if (xtc->load() && xtc->generateThumbBmp(height)) {
-      return;
-    }
-  }
-  book.coverBmpPath.clear();
-}
-
 void HomeActivity::loadRecentCovers(int coverHeight) {
   recentsLoading = true;
   bool showingLoading = false;
@@ -167,15 +63,7 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
 
   int progress = 0;
   for (RecentBook& book : recentBooks) {
-    // The cover grid shares one slot size; generating at any other height
-    // would rescale the dithered thumb at draw time and alias badly.
-    const int thumbHeight = coverGridUi ? coverGridUi->thumbHeightFor() : coverHeight;
-    if (coverGridUi) {
-      loadGridCover(book, thumbHeight, showingLoading, popupRect);
-      ++progress;
-      if (showingLoading) GUI.fillPopupProgress(renderer, popupRect, progress * 100 / recentBooks.size());
-      continue;
-    }
+    const int thumbHeight = coverHeight;
     if (!book.coverBmpPath.empty()) {
       std::string coverPath = UITheme::getCoverThumbPath(book.coverBmpPath, thumbHeight);
       if (!Storage.exists(coverPath.c_str())) {
@@ -232,6 +120,8 @@ void HomeActivity::loadRecentCovers(int coverHeight) {
 void HomeActivity::onEnter() {
   Activity::onEnter();
 
+  ReaderUtils::applyOrientation(renderer, SETTINGS.orientation);
+
   hasOpdsServers = OPDS_STORE.hasServers();
   // Plugin System is the global opt-in. Once enabled, expose the Plugins entry
   // even when no SD plugins are installed yet so Plugin Hub can be installed
@@ -239,23 +129,8 @@ void HomeActivity::onEnter() {
   hasPlugins = SETTINGS.pluginsEnabled != 0;
 
   const auto& metrics = UITheme::getInstance().getMetrics();
-  if (UITheme::getInstance().hasCoverGridHome()) {
-    // Screen-lifetime interaction tables and component properties exceed the stack budget.
-    coverGridUi = makeUniqueNoThrow<CoverGridHomeUi>(renderer);
-    if (!coverGridUi) LOG_ERR("HOME", "OOM: cover grid UI; using standard home");
-  }
-  loadRecentBooks(coverGridUi ? CoverGridHomeUi::MAX_BOOKS : metrics.homeRecentBooksCount);
+  loadRecentBooks(metrics.homeRecentBooksCount);
   hasContinueReading = !recentBooks.empty();
-  if (coverGridUi) {
-    fillCoverGridFromLibrary();
-    resolveGridCoverPaths();
-    const HomeMenuItem slot = slotItem();
-    coverGridUi->begin(recentBooks,
-                       slot == HomeMenuItem::PLUGINS        ? CoverGridHomeUi::SlotTab::PLUGINS
-                       : slot == HomeMenuItem::OPDS_BROWSER ? CoverGridHomeUi::SlotTab::OPDS
-                                                            : CoverGridHomeUi::SlotTab::NONE,
-                       hasContinueReading);
-  }
 
   const auto base = static_cast<int>(recentBooks.size());
   selectorIndex = initialMenuItem == HomeMenuItem::NONE ? 0 : base + menuItemToIndex(initialMenuItem, slotItem());
@@ -266,8 +141,6 @@ void HomeActivity::onEnter() {
 
 void HomeActivity::onExit() {
   Activity::onExit();
-
-  coverGridUi.reset();
 
   // Free the stored cover buffer if any
   freeCoverBuffer();
@@ -344,19 +217,15 @@ void HomeActivity::loop() {
     }
   };
 
-  // Cover grid home splits navigation by button group (see below); the flat
-  // next/previous cycle is for the classic list home only.
-  if (!coverGridUi) {
-    buttonNavigator.onNext([this, menuCount] {
-      selectorIndex = ButtonNavigator::nextIndex(selectorIndex, menuCount);
-      requestUpdate();
-    });
+  buttonNavigator.onNext([this, menuCount] {
+    selectorIndex = ButtonNavigator::nextIndex(selectorIndex, menuCount);
+    requestUpdate();
+  });
 
-    buttonNavigator.onPrevious([this, menuCount] {
-      selectorIndex = ButtonNavigator::previousIndex(selectorIndex, menuCount);
-      requestUpdate();
-    });
-  }
+  buttonNavigator.onPrevious([this, menuCount] {
+    selectorIndex = ButtonNavigator::previousIndex(selectorIndex, menuCount);
+    requestUpdate();
+  });
 
   const auto swipe = mappedInput.wasSwipe();
   if (swipe == MappedInputManager::SwipeDir::Up) {
@@ -378,59 +247,16 @@ void HomeActivity::loop() {
     return;
   }
 
-  if (coverGridUi) {
-    const int touched = coverGridUi->selectedAction(mappedInput);
-    if (touched >= 0 && touched < menuCount) {
-      selectorIndex = touched;
-      activateSelection();
-      return;
-    }
-    if (mappedInput.wasReleased(MappedInputManager::Button::Confirm)) {
-      activateSelection();
-      return;
-    }
-    // Side page buttons walk the covers, front Left/Right walk the tabs
-    // (selectorIndex is flat: books first, then the tab items). A press while
-    // selection sits in the other band jumps into this band first.
-    const int bookCount = static_cast<int>(recentBooks.size());
-    const auto cycleBand = [this](const int base, const int count, const int dir) {
-      if (count <= 0) return;
-      int idx = selectorIndex - base;
-      if (idx < 0 || idx >= count) {
-        idx = dir > 0 ? 0 : count - 1;
-      } else {
-        idx = (idx + count + dir) % count;
-      }
-      selectorIndex = base + idx;
-      requestUpdate();
-    };
-    buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Up},
-                                         [&cycleBand, bookCount] { cycleBand(0, bookCount, -1); });
-    buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Down},
-                                         [&cycleBand, bookCount] { cycleBand(0, bookCount, +1); });
-    buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Left}, [this, &cycleBand] {
-      const int bookCount = static_cast<int>(recentBooks.size());
-      cycleBand(bookCount, getMenuItemCount() - bookCount, -1);
-    });
-    buttonNavigator.onPressAndContinuous({MappedInputManager::Button::Right}, [this, &cycleBand] {
-      const int bookCount = static_cast<int>(recentBooks.size());
-      cycleBand(bookCount, getMenuItemCount() - bookCount, +1);
-    });
-    return;
-  }
-
-  // Match the rendered cover grid, which lays tiles inside getContentArea()
-  // (origin content.x + contentSidePadding, span content.width). Using
-  // screen-relative getScreenWidth()/contentSidePadding here offset the touch
-  // targets from the drawn covers by content.x on bezel-inset panels (EEGO A4).
-  const Rect content = UITheme::getInstance().getContentArea(renderer);
+  // Route touches through the same rects render() draws through, so the hit
+  // bands stay on the visuals (see homeContentLayout).
+  const auto layout = homeContentLayout();
   const int coverColumnCount = std::max(1, metrics.homeRecentBooksCount);
   const int recentCount = std::min(static_cast<int>(recentBooks.size()), coverColumnCount);
-  const int coverColumnWidth = (content.width - 2 * metrics.contentSidePadding) / coverColumnCount;
+  const int coverColumnWidth = (layout.cover.width - 2 * metrics.contentSidePadding) / coverColumnCount;
   int touchedBook = -1;
-  const auto coverTouch = mappedInput.colTouch(touchedBook, content.x + metrics.contentSidePadding, coverColumnWidth,
-                                               recentCount, metrics.homeTopPadding,
-                                               metrics.homeTopPadding + metrics.homeCoverTileHeight, coverColumnWidth);
+  const auto coverTouch =
+      mappedInput.colTouch(touchedBook, layout.cover.x + metrics.contentSidePadding, coverColumnWidth, recentCount,
+                           layout.cover.y, static_cast<int>(layout.cover.y + layout.cover.height), coverColumnWidth);
   if (coverTouch != MappedInputManager::RowTouch::None) {
     if (coverTouch == MappedInputManager::RowTouch::Down) {
       if (selectorIndex != touchedBook) {
@@ -445,12 +271,12 @@ void HomeActivity::loop() {
     return;
   }
 
-  const int menuTop = metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset;
+  const int menuTop = layout.menu.y;
   const int renderedMenuCount =
       menuCount - (metrics.homeContinueReadingInMenu ? 0 : static_cast<int>(recentBooks.size()));
   int menuRow = -1;
-  // Row height from the theme, not the metrics table: RoundedRaff draws
-  // font-derived rows and the touch grid must match the visuals exactly.
+  // Row height from the theme, not the metrics table: the touch grid must
+  // match the drawn rows exactly.
   const int menuRowHeight = GUI.getMenuRowHeight(renderer);
   const auto menuTouch = mappedInput.rowTouch(menuRow, menuTop, menuRowHeight + metrics.menuSpacing, renderedMenuCount,
                                               0, INT32_MAX, menuRowHeight);
@@ -475,51 +301,50 @@ void HomeActivity::loop() {
   }
 }
 
-void HomeActivity::render(RenderLock&&) {
+HomeActivity::HomeContentLayout HomeActivity::homeContentLayout() const {
   const auto& metrics = UITheme::getInstance().getMetrics();
-  const auto pageWidth = renderer.getScreenWidth();
-  const auto pageHeight = renderer.getScreenHeight();
-  // Content columns clear the bezel insets on rounded panels. The header
+  const int pageHeight = renderer.getScreenHeight();
+  // Content columns clear the bezel insets on rounded panels; the header
   // self-insets in drawHeader, so only the cover/menu need it here.
   const Rect content = UITheme::getInstance().getContentArea(renderer);
 
-  renderer.clearScreen();
-  if (coverGridUi) {
-    const auto drawGrid = [&] {
-      renderer.clearScreen();
-      coverGridUi->setSelection(selectorIndex);
-      UITheme::getInstance().drawCoverGridHome(*coverGridUi);
-      // Front Left/Right walk the tabs, so their hints read Left/Right; the
-      // side page buttons (unhinted) walk the covers.
-      const auto labels = mappedInput.mapLabels(hasContinueReading ? tr(STR_RESUME) : "", tr(STR_SELECT),
-                                                tr(STR_DIR_LEFT), tr(STR_DIR_RIGHT));
-      GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
-    };
-    drawGrid();
-    // Slot heights are recorded during the draw above; a change (first layout
-    // pass, orientation switch) means the paths must point at those sizes and
-    // any missing thumbs must be generated. Resolve the covers before the
-    // panel is touched and redraw into the framebuffer, so Home paints once
-    // instead of three e-ink refreshes (placeholder, placeholder, covers).
-    if (coverGridUi->takeThumbHeightChanged()) {
-      coverGridUi->refreshCoverPaths();
-      recentsLoaded = false;
-    }
-    if (!recentsLoaded && !recentsLoading) {
-      loadRecentCovers(CoverGridHomeUi::THUMB_HEIGHT);
-      coverGridUi->refreshCoverPaths();
-      drawGrid();
-      if (coverGridUi->takeThumbHeightChanged()) {
-        coverGridUi->refreshCoverPaths();
-        recentsLoaded = false;
-        requestUpdate();
-      }
-    }
-    renderer.displayBuffer(cleanInitialRefresh && !firstRenderDone ? HalDisplay::HALF_REFRESH
-                                                                   : HalDisplay::FAST_REFRESH);
-    firstRenderDone = true;
-    return;
+  const bool landscape = UITheme::isLandscape(renderer);
+  if (!landscape) {
+    // The menu height comes from the original portrait layout; the cover tile
+    // takes everything above it.
+    return {
+        Rect{content.x, metrics.homeTopPadding, content.width, metrics.homeCoverTileHeight},
+        Rect{content.x, metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset, content.width,
+             pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing +
+                           metrics.homeMenuTopOffset + metrics.buttonHintsHeight)}};
   }
+
+  // Landscape is too short to stack cover over menu: split the band (bezel
+  // insets plus the rail gutter) left/right, columns side by side starting at
+  // the same top (worst case six menu rows exactly fills the band).
+  const auto rail = UITheme::getHintRails(renderer);
+  const int bandX = content.x + rail.left;
+  const int bandW = content.width - rail.left - rail.right;
+  const int colW = bandW / 2;
+  const int bandTop = metrics.homeTopPadding;
+  const int bandHeight = pageHeight - bandTop;
+  // Menu rows are vertically centered in their column: the block is the drawn
+  // count of rows, so the touch grid below tracks exactly where they render.
+  const int rowHeight = GUI.getMenuRowHeight(renderer);
+  const int continueReading = metrics.homeContinueReadingInMenu && !recentBooks.empty() ? 1 : 0;
+  const int slot = slotItem() != HomeMenuItem::NONE ? 1 : 0;
+  const int rowCount = 4 + slot + continueReading;
+  const int blockHeight = rowCount * (rowHeight + metrics.menuSpacing) - metrics.menuSpacing;
+  const int menuY = bandTop + (bandHeight - blockHeight) / 2;
+  return {Rect{bandX, bandTop, colW, bandHeight}, Rect{bandX + colW, menuY, bandW - colW, blockHeight}};
+}
+
+void HomeActivity::render(RenderLock&&) {
+  const auto& metrics = UITheme::getInstance().getMetrics();
+  const auto pageWidth = renderer.getScreenWidth();
+  const auto layout = homeContentLayout();
+
+  renderer.clearScreen();
   // A cover snapshot from the other output polarity holds the other byte form (night mode keeps images pre-inverted so
   // they stay positive): pasting it back after a theme switch showed the cover as a negative. Redraw it instead.
   if (coverBufferStored && coverBufferInverted != display.isInverted()) {
@@ -529,8 +354,8 @@ void HomeActivity::render(RenderLock&&) {
   bool bufferRestored = coverRendered && coverBufferStored && restoreCoverBuffer();
 
   // Band spans topPadding..homeTopPadding: the cover tile starts at the fixed
-  // homeTopPadding, so the height must shrink by topPadding or the band (and a
-  // centered title, e.g. RoundedRaff's book title) sinks into the tile.
+  // homeTopPadding, so the height must shrink by topPadding or the band (and
+  // any centered title in it) sinks into the tile.
   // Home is the stack root: no back button in its header.
   GUI.drawHeader(renderer, Rect{0, metrics.topPadding, pageWidth, metrics.homeTopPadding - metrics.topPadding},
                  metrics.homeContinueReadingInMenu && !recentBooks.empty() ? recentBooks[0].title.c_str() : nullptr,
@@ -539,14 +364,20 @@ void HomeActivity::render(RenderLock&&) {
   // Record the tile rect so storeCoverBuffer (called from the theme) knows
   // which sub-region of the framebuffer to snapshot. ~16 KB in Portrait
   // instead of the 48 KB full framebuffer the previous bind captured.
-  coverRectX = content.x;
-  coverRectY = metrics.homeTopPadding;
-  coverRectW = content.width;
-  coverRectH = metrics.homeCoverTileHeight;
+  coverRectX = layout.cover.x;
+  coverRectY = layout.cover.y;
+  coverRectW = layout.cover.width;
+  coverRectH = layout.cover.height;
 
-  GUI.drawRecentBookCover(renderer, Rect{content.x, metrics.homeTopPadding, content.width, metrics.homeCoverTileHeight},
-                          recentBooks, selectorIndex, coverRendered, coverBufferStored, bufferRestored,
-                          std::bind(&HomeActivity::storeCoverBuffer, this));
+  GUI.drawRecentBookCover(renderer, layout.cover, recentBooks, selectorIndex, coverRendered, coverBufferStored,
+                          bufferRestored, std::bind(&HomeActivity::storeCoverBuffer, this));
+
+  // Divider between the cover column and the menu column (landscape split).
+  // It runs from the header rule down, never crossing either divider.
+  if (UITheme::isLandscape(renderer)) {
+    const int pageHeight = renderer.getScreenHeight();
+    renderer.fillRect(layout.menu.x - 3, metrics.homeTopPadding, 3, pageHeight - metrics.homeTopPadding, true);
+  }
 
   // Build menu items dynamically
   std::vector<const char*> menuItems = {tr(STR_BROWSE_FILES), tr(STR_LIBRARY), tr(STR_FILE_TRANSFER),
@@ -565,11 +396,7 @@ void HomeActivity::render(RenderLock&&) {
   }
 
   GUI.drawButtonMenu(
-      renderer,
-      Rect{content.x, metrics.homeTopPadding + metrics.homeCoverTileHeight + metrics.homeMenuTopOffset, content.width,
-           pageHeight - (metrics.headerHeight + metrics.homeTopPadding + metrics.verticalSpacing +
-                         metrics.homeMenuTopOffset + metrics.buttonHintsHeight)},
-      static_cast<int>(menuItems.size()),
+      renderer, layout.menu, static_cast<int>(menuItems.size()),
       metrics.homeContinueReadingInMenu ? selectorIndex : selectorIndex - recentBooks.size(),
       [&menuItems](int index) { return std::string(menuItems[index]); },
       [&menuIcons](int index) { return menuIcons[index]; });
@@ -583,8 +410,7 @@ void HomeActivity::render(RenderLock&&) {
   firstRenderDone = true;
   if (!recentsLoaded && !recentsLoading) {
     recentsLoading = true;
-    const int themeThumbHeight = GUI.homeCoverThumbHeight(renderer);
-    loadRecentCovers(themeThumbHeight > 0 ? themeThumbHeight : metrics.homeCoverHeight);
+    loadRecentCovers(metrics.homeCoverHeight);
   }
 }
 

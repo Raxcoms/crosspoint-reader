@@ -65,7 +65,11 @@ static_assert(std::size(WORD_SPACING_IDS) == (WORD_SPACING_MAX - WORD_SPACING_MI
 
 TextSettingsActivity::TextSettingsActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                            const SdCardFontRegistry* registry, Tab initialTab)
-    : UiTabListActivity("TextSettings", renderer, mappedInput), registry_(registry), tab_(initialTab) {}
+    : UiTabListActivity("TextSettings", renderer, mappedInput), registry_(registry), tab_(initialTab) {
+  // Fixed short tab lists under a live preview; a reserved readout line would
+  // cost preview height for no pagination benefit.
+  positionReadout = false;
+}
 
 const char* TextSettingsActivity::tabLabel(const int index) const { return I18N.get(TAB_NAME_IDS[index]); }
 

@@ -11,6 +11,7 @@
 #include "HeaderBackTapTarget.h"
 #include "UITheme.h"
 #include "icons/headerIcons.h"
+#include "themes/HeaderChrome.h"
 
 namespace fui = freeink::ui;
 
@@ -24,11 +25,17 @@ void catalogScreenHeader(UiAppHost::UiScreen& screen, const GfxRenderer& rendere
   // Same battery/clock band as every GUI.drawHeader screen; the header
   // heights are unified across themes, so the buttons derive from the band.
   GUI.applyHeaderStatus(renderer, header);
-  const auto frameRect = screen.frame().screen();
-  const fui::Rect band = BaseTheme::headerBand(renderer,
-                                               fui::Rect{frameRect.x, static_cast<int16_t>(metrics.topPadding),
-                                                         frameRect.width, static_cast<int16_t>(metrics.headerHeight)},
-                                               header);
+  // Landscape: the hint rail covers the corners the header pins its status to,
+  // so withhold that chrome and draw it centered on the rail-safe band after
+  // the band. The band is folded the same way so the whole header stays clear
+  // of the rail.
+  const auto centeredChrome = fui::withholdCenteredStatus(renderer, header);
+  const auto frameRectScreen = screen.frame().screen();
+  const auto rail = UITheme::getHintRails(renderer);
+  const auto bandRect = fui::Rect{
+      static_cast<int16_t>(frameRectScreen.x + rail.left), static_cast<int16_t>(metrics.topPadding),
+      static_cast<int16_t>(frameRectScreen.width - rail.left - rail.right), static_cast<int16_t>(metrics.headerHeight)};
+  const fui::Rect band = BaseTheme::headerBand(renderer, bandRect, header);
   // Back button on touch boards, as on every GUI.drawHeader screen: the rect
   // goes to HeaderBackTapTarget, which MappedInputManager folds into
   // Button::Back, so each page's own Back handling applies (leaving a list,
@@ -59,9 +66,13 @@ void catalogScreenHeader(UiAppHost::UiScreen& screen, const GfxRenderer& rendere
   header.sidePadding = theme.headerSidePadding;
   header.minTouchSize = theme.minTouchSize;
   fui::header(screen.frame(), band, header);
+  fui::drawCenteredHeaderStatus(screen.frame(), band, centeredChrome);
+  // Catalog screens draw their own header band, so they get the same rail
+  // divider as BaseTheme::drawHeader.
+  fui::drawHeaderRailDivider(renderer, band, rail);
   screen.setContentMarginFromScreen(
       fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing), 0,
-                  static_cast<int16_t>(metrics.buttonHintsHeight), 0});
+                  UITheme::getHintBandBottomInset(renderer), 0});
 }
 
 void catalogCenteredBlock(UiAppHost::UiScreen& screen, const std::initializer_list<CatalogLine> lines) {

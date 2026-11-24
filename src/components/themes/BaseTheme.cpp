@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <string>
 
+#include "HeaderChrome.h"
 #include "I18n.h"
 #include "RecentBooksStore.h"
 #include "clippings/SelectionGeometry.h"
@@ -218,19 +219,20 @@ void BaseTheme::drawButtonHints(GfxRenderer& renderer, const char* btn1, const c
   }
 
   const GfxRenderer::Orientation orig_orientation = renderer.getOrientation();
-  renderer.setOrientation(GfxRenderer::Orientation::Portrait);
-
-  const int pageHeight = renderer.getScreenHeight();
   constexpr int buttonWidth = 106;
   constexpr int buttonHeight = BaseMetrics::values.buttonHintsHeight;
-  constexpr int buttonY = BaseMetrics::values.buttonHintsHeight;  // Distance from bottom
-  // Keyed to the portrait panel width: the 528-wide X3 gets more spacing than
-  // the 480-wide boards (X4, X4 Pro, and the other 800x480 panels).
   constexpr int narrowButtonPositions[] = {25, 130, 245, 350};
   constexpr int wideButtonPositions[] = {38, 154, 268, 384};
-  const int* buttonPositions = renderer.getScreenWidth() >= 528 ? wideButtonPositions : narrowButtonPositions;
+  // Keyed to the portrait panel width: the 528-wide X3 gets more spacing than
+  // the 480-wide boards (X4, X4 Pro, and the other 800x480 panels).
+  const int portraitWidth = renderer.getScreenWidth();
+  const int* buttonPositions = portraitWidth >= 528 ? wideButtonPositions : narrowButtonPositions;
   const char* labels[] = {btn1, btn2, btn3, btn4};
   const bool grayscale = renderer.getRenderMode() != GfxRenderer::BW && !renderer.grayPlanesAreAbsolute();
+
+  renderer.setOrientation(GfxRenderer::Orientation::Portrait);
+  const int pageHeight = renderer.getScreenHeight();
+  const int buttonY = buttonHeight;  // Distance from bottom
 
   for (int i = 0; i < 4; i++) {
     // Only draw if the label is non-empty
@@ -427,11 +429,18 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
   // Battery + clock chrome and their title reserves live in the FreeInkUI
   // header component; this only fills the values from settings and metrics.
   applyHeaderStatus(renderer, props);
-  // Callers pass a full-width header rect; headerBand fits it to the board's bezel.
-  const fui::Rect band = headerBand(renderer,
-                                    fui::Rect{static_cast<int16_t>(rect.x), static_cast<int16_t>(rect.y),
-                                              static_cast<int16_t>(rect.width), static_cast<int16_t>(rect.height)},
-                                    props);
+  // In landscape the hint rail covers the edge corners where the header pins
+  // the battery and clock, so withhold that chrome and draw the group
+  // centered after the band is painted.
+  const auto centeredChrome = fui::withholdCenteredStatus(renderer, props);
+  // Callers pass a full-width header rect; fold the rail into it before
+  // fitting to the board's bezel, so the band (and the centered chrome inside
+  // it) stays on the rail-safe area.
+  const auto rail = UITheme::getHintRails(renderer);
+  const auto bandRect =
+      fui::Rect{static_cast<int16_t>(rect.x + rail.left), static_cast<int16_t>(rect.y),
+                static_cast<int16_t>(rect.width - rail.left - rail.right), static_cast<int16_t>(rect.height)};
+  const fui::Rect band = headerBand(renderer, bandRect, props);
   if (rect.height < UITheme::getInstance().getMetrics().headerHeight) {
     // Short bands (home) are not split into strip + content row: the title
     // centers on the band, clear of the band's bottom edge.
@@ -458,13 +467,18 @@ void BaseTheme::drawHeader(const GfxRenderer& renderer, Rect rect, const char* t
   props.subtitleText = tokens.smallText;
   props.styles = tokens.popup;
   props.sidePadding = tokens.headerSidePadding;
-  // Underline only under a titled header: an untitled band (Lyra home screen)
-  // historically drew no rule, and the old themes keyed the line on the title.
-  if (title != nullptr && props.styles.normal.border.kind == fui::PaintKind::None && tokens.headerUnderline > 0) {
+  // The underline spans the whole band on every screen: it divides the header
+  // chrome from the content below (an untitled band gets it too).
+  if (props.styles.normal.border.kind == fui::PaintKind::None && tokens.headerUnderline > 0) {
     props.styles.normal.border = fui::Paint::solid(fui::Color::Black);
     props.styles.normal.borderWidth = tokens.headerUnderline;
   }
   fui::header(ui.frame, band, props);
+  fui::drawCenteredHeaderStatus(ui.frame, band, centeredChrome);
+
+  // Rail divider from this rule to the screen bottom. Shared with the catalog
+  // header so every landscape screen gets the same edge.
+  fui::drawHeaderRailDivider(renderer, band, rail);
 }
 
 void BaseTheme::drawSubHeader(const GfxRenderer& renderer, Rect rect, const char* label, const char* rightLabel) const {

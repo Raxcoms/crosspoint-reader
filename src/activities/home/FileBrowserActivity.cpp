@@ -611,7 +611,7 @@ void FileBrowserActivity::buildScreen(UiScreen& screen) {
   const auto& metrics = UITheme::getInstance().getMetrics();
   // Content below the GUI.drawHeader band, above the button hints.
   screen.setContentMarginFromScreen(fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight), 0,
-                                                static_cast<int16_t>(metrics.buttonHintsHeight), 0});
+                                                UITheme::getHintBandBottomInset(renderer), 0});
   screen.spacer(static_cast<int16_t>(metrics.verticalSpacing));
 
   // Full path band at the bottom: separator on top, left-truncated so the
@@ -699,6 +699,7 @@ void FileBrowserActivity::drawFooter() {
   const auto labels = mappedInput.mapLabels(backLabel, confirmLabel, files.empty() ? "" : tr(STR_DIR_UP),
                                             files.empty() ? "" : tr(STR_DIR_DOWN));
   GUI.drawButtonHints(renderer, labels.btn1, labels.btn2, labels.btn3, labels.btn4);
+  drawPositionReadout();
 }
 
 size_t FileBrowserActivity::findEntry(const std::string& name) const {

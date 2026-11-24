@@ -5,13 +5,11 @@
 #include "./FileBrowserActivity.h"
 #include "RecentBooksStore.h"
 #include "activities/Activity.h"
-#include "components/CoverGridHomeUi.h"
 #include "util/ButtonNavigator.h"
 
 struct Rect;
 
 class HomeActivity final : public Activity {
-  std::unique_ptr<CoverGridHomeUi> coverGridUi;
   ButtonNavigator buttonNavigator;
   int selectorIndex = 0;
   bool recentsLoading = false;
@@ -71,6 +69,17 @@ class HomeActivity final : public Activity {
     if (idx == i) return HomeMenuItem::SETTINGS_MENU;
     return HomeMenuItem::NONE;
   }
+  // Rects for the cover and the menu, shared by render and input routing so
+  // the touch bands always match what is drawn: portrait stacks the menu
+  // below the cover, landscape splits them left/right inside the rail-safe
+  // band (columns split the full height; the menu block is vertically
+  // centered in its column).
+  struct HomeContentLayout {
+    Rect cover;
+    Rect menu;
+  };
+  HomeContentLayout homeContentLayout() const;
+
   void onRecentBookSelected(const std::string& path);
   void onFileBrowserOpen();
   void onLibraryOpen();
@@ -85,9 +94,6 @@ class HomeActivity final : public Activity {
   void freeCoverBuffer();     // Free the stored cover buffer
   void loadRecentBooks(int maxBooks);
   void loadRecentCovers(int coverHeight);
-  void fillCoverGridFromLibrary();
-  void resolveGridCoverPaths();
-  void loadGridCover(RecentBook& book, int height, bool& showingLoading, Rect& popupRect);
 
  public:
   explicit HomeActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,

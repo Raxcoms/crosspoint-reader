@@ -86,6 +86,18 @@ class UiListActivity : public Activity, protected UiAppHost {
   // Move the selection to index and pull the viewport to it.
   void moveSelectionTo(int index);
 
+  // "position/count" readout at the bottom-right of the content area, just
+  // above the portrait hint band or at the rail's inner edge in landscape.
+  // syncListViewport reserves its line so rows never run under it. Disabled
+  // by screens with their own pager or readout (library, OPDS browser, ...).
+  bool positionReadout = true;
+  // 0-based row the readout reports, or -1 when the selection is not a row
+  // (UiTabListActivity's leading ring slot is the tab band).
+  virtual int readoutPosition() { return activeNav().selected; }
+  // Draws the readout. Called from the default drawFooter; screens with
+  // custom button hints call it explicitly.
+  void drawPositionReadout();
+
   // --- shared state ----------------------------------------------------------
   // Selection + viewport (selected/top/visibleRows/followOnBuild). Access via
   // activeNav() in shared code; `nav` is the single-list default storage.
@@ -95,6 +107,10 @@ class UiListActivity : public Activity, protected UiAppHost {
   bool cleanNextRefresh = false;
 
  private:
+  // Readout anchor set by the last syncListViewport (readoutY_ < 0 = none).
+  int16_t readoutRight_ = 0;
+  int16_t readoutY_ = -1;
+
   static void screenTrampoline(UiScreen& screen, void* user);
   static void rowActionTrampoline(const freeink::ui::ActionEvent& event, void* user);
   // Named apart from UiAppHost::routeTouch so the host overload stays visible

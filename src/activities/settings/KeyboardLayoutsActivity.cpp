@@ -58,7 +58,7 @@ void KeyboardLayoutsActivity::activateIndex(const int index) {
 void KeyboardLayoutsActivity::buildScreen(UiScreen& screen) {
   const auto& metrics = UITheme::getInstance().getMetrics();
   screen.setContentMarginFromScreen(fui::Insets{static_cast<int16_t>(metrics.topPadding + metrics.headerHeight), 0,
-                                                static_cast<int16_t>(metrics.buttonHintsHeight), 0});
+                                                UITheme::getHintBandBottomInset(renderer), 0});
   screen.spacer(static_cast<int16_t>(metrics.verticalSpacing));
 
   for (int i = 0; i < keyboard_layouts::COUNT; ++i) {

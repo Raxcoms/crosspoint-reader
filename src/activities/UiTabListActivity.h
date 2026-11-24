@@ -56,13 +56,16 @@ class UiTabListActivity : public UiListActivity {
   void moveRingTo(int ringIndex);
 
   // --- screen helpers --------------------------------------------------------
-  // The shared tab band: theme-driven pill treatment (label-hugging Lyra vs
-  // full-slot RoundedRaff), Lyra focused band wash, always-on divider.
+  // The shared tab band: Lyra label-hugging pills, focused band wash,
+  // always-on divider.
   void buildTabBar(UiScreen& screen);
   // Ring-aware counterpart of syncListViewport: measures rows, applies the
   // one-shot follow to the remembered row, clamps, and writes
   // props.selectedIndex = ring - 1.
   void syncTabListViewport(UiScreen& screen, freeink::ui::ListProps& props);
+
+  // Ring position 0 is the tab band; the readout reports the row index.
+  int readoutPosition() override;
 
   // Per-tab selection/viewport state, sized in onEnter. Protected so subclass
   // tab-switch code can seed the target tab's ring/viewport.

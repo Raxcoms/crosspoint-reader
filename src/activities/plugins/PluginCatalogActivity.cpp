@@ -540,7 +540,11 @@ std::string PluginCatalogActivity::downloadDir() const {
 
 PluginCatalogActivity::PluginCatalogActivity(GfxRenderer& renderer, MappedInputManager& mappedInput,
                                              const bool rootMode)
-    : CatalogActivity("PluginCatalog", renderer, mappedInput, /*wantsTouchLongPress=*/true), rootMode(rootMode) {}
+    : CatalogActivity("PluginCatalog", renderer, mappedInput, /*wantsTouchLongPress=*/true), rootMode(rootMode) {
+  // Own page-window paging with prev/next arrows; a row count over the
+  // current page window would misread as a list total.
+  positionReadout = false;
+}
 
 PluginCatalogActivity::~PluginCatalogActivity() = default;
 

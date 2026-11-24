@@ -486,66 +486,96 @@ void CrossPointWebServerActivity::renderServerRunning() const {
     renderWifiIndicator(metrics.topPadding + metrics.headerHeight);
   }
 
+  // These screens paint with raw renderer calls, so the landscape rail gutter
+  // that FUI screens get from the device context has to be applied by hand.
+  const auto rail = UITheme::getHintRails(renderer);
+  const Rect content{static_cast<int16_t>(rail.left + metrics.contentSidePadding), 0,
+                     static_cast<int16_t>(pageWidth - rail.left - rail.right - 2 * metrics.contentSidePadding), 0};
+  // Landscape is too short to stack two QR codes sideways in the same band;
+  // put them side by side there, but keep portrait on the stacked layout.
+  const bool sideBySide =
+      UITheme::isLandscape(renderer) && content.width >= 2 * QR_CODE_WIDTH + metrics.verticalSpacing * 2;
+
   int startY = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing * 2;
   int height10 = renderer.getLineHeight(UI_10_FONT_ID);
   if (isApMode) {
     // AP mode display
-    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, startY, tr(STR_CONNECT_WIFI_HINT), true,
-                      EpdFontFamily::BOLD);
+    renderer.drawText(UI_10_FONT_ID, content.x, startY, tr(STR_CONNECT_WIFI_HINT), true, EpdFontFamily::BOLD);
     startY += height10 + metrics.verticalSpacing * 2;
 
     // Show QR code for Wifi
     // follows spec at https://github.com/zxing/zxing/wiki/Barcode-Contents#wi-fi-network-config-android-ios-11
     const std::string wifiConfig = std::string("WIFI:T:nopass;S:") + connectedSSID + ";;";
-    const Rect qrBoundsWifi(metrics.contentSidePadding, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT);
-    QrUtils::drawQrCode(renderer, qrBoundsWifi, wifiConfig);
-
-    // Show network name
-    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 80,
-                      connectedSSID.c_str());
-
-    startY += QR_CODE_HEIGHT + 2 * metrics.verticalSpacing;
-
-    // Show primary URL (hostname)
-    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding, startY, tr(STR_OPEN_URL_HINT), true,
-                      EpdFontFamily::BOLD);
-    startY += height10 + metrics.verticalSpacing * 2;
-
     std::string hostnameUrl = std::string("http://") + AP_HOSTNAME + ".local/";
     std::string ipUrl = tr(STR_OR_HTTP_PREFIX) + connectedIP + "/";
 
-    // Show QR code for URL
-    const Rect qrBoundsUrl(metrics.contentSidePadding, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT);
-    QrUtils::drawQrCode(renderer, qrBoundsUrl, hostnameUrl);
+    if (sideBySide) {
+      const int colW = content.width / 2;
+      const int qrWifiX = content.x + (colW - QR_CODE_WIDTH) / 2;
+      const int qrUrlX = content.x + colW + (colW - QR_CODE_WIDTH) / 2;
+      QrUtils::drawQrCode(renderer, Rect{qrWifiX, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT}, wifiConfig);
+      QrUtils::drawQrCode(renderer, Rect{qrUrlX, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT}, hostnameUrl);
+      const int labelY = startY + QR_CODE_HEIGHT + metrics.verticalSpacing;
+      // Long SSIDs/hostnames may not fit the QR; clamp the text to the QR's
+      // left edge instead of running past the column when wider than it.
+      const int ssidW = renderer.getTextWidth(UI_10_FONT_ID, connectedSSID.c_str());
+      const int ssidX = qrWifiX + std::max(0, (QR_CODE_WIDTH - ssidW) / 2);
+      renderer.drawText(UI_10_FONT_ID, ssidX, labelY, connectedSSID.c_str());
+      const int hostW = renderer.getTextWidth(UI_10_FONT_ID, hostnameUrl.c_str());
+      const int hostX = qrUrlX + std::max(0, (QR_CODE_WIDTH - hostW) / 2);
+      renderer.drawText(UI_10_FONT_ID, hostX, labelY, hostnameUrl.c_str());
+      const int ipW = renderer.getTextWidth(SMALL_FONT_ID, ipUrl.c_str());
+      const int ipX = qrUrlX + std::max(0, (QR_CODE_WIDTH - ipW) / 2);
+      renderer.drawText(SMALL_FONT_ID, ipX, labelY + height10 + 2, ipUrl.c_str());
+    } else {
+      const Rect qrBoundsWifi(content.x, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT);
+      QrUtils::drawQrCode(renderer, qrBoundsWifi, wifiConfig);
 
-    // Show IP address as fallback
-    renderer.drawText(UI_10_FONT_ID, metrics.contentSidePadding + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 80,
-                      hostnameUrl.c_str());
-    renderer.drawText(SMALL_FONT_ID, metrics.contentSidePadding + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 100,
-                      ipUrl.c_str());
+      // Show network name
+      renderer.drawText(UI_10_FONT_ID, content.x + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 80,
+                        connectedSSID.c_str());
+
+      startY += QR_CODE_HEIGHT + 2 * metrics.verticalSpacing;
+
+      // Show primary URL (hostname)
+      renderer.drawText(UI_10_FONT_ID, content.x, startY, tr(STR_OPEN_URL_HINT), true, EpdFontFamily::BOLD);
+      startY += height10 + metrics.verticalSpacing * 2;
+
+      // Show QR code for URL
+      const Rect qrBoundsUrl(content.x, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT);
+      QrUtils::drawQrCode(renderer, qrBoundsUrl, hostnameUrl);
+
+      // Show IP address as fallback
+      renderer.drawText(UI_10_FONT_ID, content.x + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 80,
+                        hostnameUrl.c_str());
+      renderer.drawText(SMALL_FONT_ID, content.x + QR_CODE_WIDTH + metrics.verticalSpacing, startY + 100,
+                        ipUrl.c_str());
+    }
   } else {
     startY += metrics.verticalSpacing * 2;
 
     // STA mode display (original behavior)
     // std::string ipInfo = "IP Address: " + connectedIP;
-    renderer.drawCenteredText(UI_10_FONT_ID, startY, tr(STR_OPEN_URL_HINT), true, EpdFontFamily::BOLD);
+    UITheme::drawCenteredText(renderer, content, UI_10_FONT_ID, startY, tr(STR_OPEN_URL_HINT), true,
+                              EpdFontFamily::BOLD);
     startY += height10;
-    renderer.drawCenteredText(UI_10_FONT_ID, startY, tr(STR_SCAN_QR_HINT), true, EpdFontFamily::BOLD);
+    UITheme::drawCenteredText(renderer, content, UI_10_FONT_ID, startY, tr(STR_SCAN_QR_HINT), true,
+                              EpdFontFamily::BOLD);
     startY += height10 + metrics.verticalSpacing * 2;
 
     // Show QR code for URL
     std::string webInfo = "http://" + connectedIP + "/";
-    const Rect qrBounds((pageWidth - QR_CODE_WIDTH) / 2, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT);
+    const Rect qrBounds(content.x + (content.width - QR_CODE_WIDTH) / 2, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT);
     QrUtils::drawQrCode(renderer, qrBounds, webInfo);
     startY += QR_CODE_HEIGHT + metrics.verticalSpacing * 2;
 
     // Show web server URL prominently
-    renderer.drawCenteredText(UI_10_FONT_ID, startY, webInfo.c_str(), true);
+    UITheme::drawCenteredText(renderer, content, UI_10_FONT_ID, startY, webInfo.c_str(), true);
     startY += height10 + 5;
 
     // Also show hostname URL
     std::string hostnameUrl = std::string(tr(STR_OR_HTTP_PREFIX)) + AP_HOSTNAME + ".local/";
-    renderer.drawCenteredText(SMALL_FONT_ID, startY, hostnameUrl.c_str(), true);
+    UITheme::drawCenteredText(renderer, content, SMALL_FONT_ID, startY, hostnameUrl.c_str(), true);
   }
 
   const auto labels = mappedInput.mapLabels(tr(STR_EXIT), "", "", "");
@@ -559,7 +589,10 @@ void CrossPointWebServerActivity::renderWifiIndicator(int subHeaderTop) const {
   constexpr int ICON_HEIGHT = 14;
   const auto& metrics = UITheme::getInstance().getMetrics();
   const int iconWidth = BAR_COUNT * BAR_WIDTH + (BAR_COUNT - 1) * BAR_GAP;
-  const int iconRight = renderer.getScreenWidth() - metrics.contentSidePadding;
+  // Landscape: keep clear of the hint rail boxes, which run along the right
+  // edge and reach this high.
+  const int iconRight =
+      renderer.getScreenWidth() - UITheme::getHintRailRightGutter(renderer) - metrics.contentSidePadding;
   const int iconLeft = iconRight - iconWidth;
   const int iconBottom = subHeaderTop + metrics.tabBarHeight - metrics.verticalSpacing;
 

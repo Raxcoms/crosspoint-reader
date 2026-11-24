@@ -58,7 +58,6 @@ harness = r"""
 #include <builtinFonts/ubuntu_10_regular.h>
 #include <builtinFonts/ubuntu_12_regular.h>
 #include <components/themes/lyra/LyraTheme.h>
-#include <components/themes/roundedraff/RoundedRaffTheme.h>
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -80,6 +79,7 @@ struct GfxRenderer {
   Orientation getOrientation() const { return orientation; }
   void getOrientedViewableTRBL(int*, int*, int*, int*) const;
   int getTextHeight(int) const { return ubuntu_10_regular.ascender; }
+  int getLineHeight(int) const { return ubuntu_10_regular.advanceY; }
   void drawText(int, int x, int y, const char* text) const {
     EpdFont font(&ubuntu_10_regular);
     int width, height;
@@ -103,7 +103,7 @@ struct UITheme {
 #define tr(id) id
 constexpr const char* STR_TEXT_SETTINGS = "Text Settings";
 constexpr const char* STR_PREVIEW = """ + english.split("STR_PREVIEW: ", 1)[1].splitlines()[0] + r""";
-constexpr int UI_10_FONT_ID = 0, TOUCH_TAB_BAR_HEIGHT = 50, ACTION_TAB = 1, ACTION_ROW = 2;
+constexpr int UI_10_FONT_ID = 0, SMALL_FONT_ID = 0, TOUCH_TAB_BAR_HEIGHT = 50, ACTION_TAB = 1, ACTION_ROW = 2;
 namespace textsettings {
   struct PreviewLayout {};
 """ + preview_caption + r"""
@@ -134,6 +134,10 @@ struct TextSettingsActivity : UiTabListActivity {
   textsettings::PreviewLayout previewLayout_;
   std::vector<fui::ListItem> rowItems_;
   fui::ListNav nav;
+  // Mirrors the real TextSettingsActivity opt-out: its short fixed tab lists
+  // never overflow, so no readout line is reserved.
+  bool positionReadout = false;
+  int16_t readoutRight_ = 0, readoutY_ = -1;
   fui::ListNav& activeNav() { return nav; }
   int listCount() const { return rowItems_.size(); }
   void syncListViewport(UiScreen&, fui::ListProps&, int);
@@ -392,7 +396,7 @@ int main() {
                               BoardConfig::XTEINK_X4, BoardConfig::XTEINK_X4_CLASSIC})
     for (auto orientation : {GfxRenderer::Portrait, GfxRenderer::PortraitInverted,
                              GfxRenderer::LandscapeClockwise, GfxRenderer::LandscapeCounterClockwise})
-      for (const auto& metrics : {LyraMetrics::values, RoundedRaffMetrics::values})
+      for (const auto& metrics : {LyraMetrics::values})
         checkStyleRowsFit(profile, orientation, metrics);
   for (const auto& profile : {BoardConfig::XTEINK_X3, BoardConfig::XTEINK_X3_UC8279, BoardConfig::XTEINK_X4,
                               BoardConfig::XTEINK_X4_PRO, BoardConfig::XTEINK_X4_CLASSIC, BoardConfig::STICKY,
@@ -400,7 +404,7 @@ int main() {
                               BoardConfig::PICCO})
     for (auto orientation : {GfxRenderer::Portrait, GfxRenderer::PortraitInverted,
                              GfxRenderer::LandscapeClockwise, GfxRenderer::LandscapeCounterClockwise})
-      for (const auto& metrics : {LyraMetrics::values, RoundedRaffMetrics::values})
+      for (const auto& metrics : {LyraMetrics::values})
         for (Tab tab : {Tab::Family, Tab::Size, Tab::Layout, Tab::Style})
           checkLayout(profile, orientation, metrics, tab);
   checkSharedPartialRows();

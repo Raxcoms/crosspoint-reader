@@ -445,18 +445,22 @@ bool KeyboardEntryActivity::cursorPositionFromPoint(const int x, const int y, si
   const int inputStartY = metrics.topPadding + metrics.headerHeight + metrics.verticalSpacing +
                           metrics.verticalSpacing * 4 + metrics.keyboardVerticalOffset;
 
-  int availableWidth = content.width;
+  const auto rail = UITheme::getHintRails(renderer);
+  const int railLeft = rail.left;
+  const int railRight = rail.right;
+  const int railSafeWidth = content.width - railLeft - railRight;
+  int availableWidth = railSafeWidth;
   if (gpio.deviceIsX3()) {
     availableWidth -= 2 * metrics.sideButtonHintsWidth;
   }
-  const int effectiveMargin = (content.width - availableWidth * metrics.keyboardTextFieldWidthPercent / 100) / 2;
-  const int textLeft = content.x + effectiveMargin;
+  const int effectiveMargin = (railSafeWidth - availableWidth * metrics.keyboardTextFieldWidthPercent / 100) / 2;
+  const int textLeft = content.x + railLeft + effectiveMargin;
   const int toggleGap = inputType == InputType::Password ? 4 : 0;
   const int toggleReserve = inputType == InputType::Password ? std::max(renderer.getTextWidth(UI_12_FONT_ID, "[abc]"),
                                                                         renderer.getTextWidth(UI_12_FONT_ID, "[***]")) +
                                                                    toggleGap
                                                              : 0;
-  const int textAreaWidth = content.width - 2 * effectiveMargin - toggleReserve;
+  const int textAreaWidth = railSafeWidth - 2 * effectiveMargin - toggleReserve;
   const int maxLineWidth = textAreaWidth;
   const bool centerText = metrics.keyboardCenteredText;
   std::string displayText = displayTextForCurrentState();
@@ -517,13 +521,17 @@ bool KeyboardEntryActivity::cursorPositionFromPoint(const int x, const int y, si
 fui::Rect KeyboardEntryActivity::keyboardRect() const {
   const auto& metrics = UITheme::getInstance().getMetrics();
   const Rect content = UITheme::getContentArea(renderer);  // clear the bezel on rounded panels
+  const auto rail = UITheme::getHintRails(renderer);
+  const int16_t railLeft = rail.left;
+  const int16_t railRight = rail.right;
   const int pageHeight = renderer.getScreenHeight();
   const int rows = currentLayout().rowCount;
   const bool hasTouch = mappedInput.hasTouch();
   const int height = keyboardKeysHeight(metrics, rows, hasTouch);
   const int hintGap = hasTouch ? metrics.verticalSpacing - metrics.keyboardVerticalOffset : BUTTON_KEYBOARD_HINT_GAP;
-  const int y = pageHeight - metrics.buttonHintsHeight - height - hintGap;
-  return fui::Rect{static_cast<int16_t>(content.x), static_cast<int16_t>(y), static_cast<int16_t>(content.width),
+  const int y = pageHeight - UITheme::getHintBandBottomInset(renderer) - height - hintGap;
+  return fui::Rect{static_cast<int16_t>(content.x + railLeft), static_cast<int16_t>(y),
+                   static_cast<int16_t>(content.width - railLeft - railRight),
                    static_cast<int16_t>(hasTouch ? pageHeight - y : height)};
 }
 
@@ -745,18 +753,22 @@ void KeyboardEntryActivity::render(RenderLock&&) {
   // Field text/cursor share the bezel-safe content box the underline and
   // keyboard use (matches cursorPositionFromPoint); content.x offsets them past
   // the bezel on inset panels (EEGO A4).
-  int availableWidth = content.width;
+  const auto rail = UITheme::getHintRails(renderer);
+  const int railLeft = rail.left;
+  const int railRight = rail.right;
+  const int railSafeWidth = content.width - railLeft - railRight;
+  int availableWidth = railSafeWidth;
   if (gpio.deviceIsX3()) {
     availableWidth -= 2 * metrics.sideButtonHintsWidth;
   }
-  const int effectiveMargin = (content.width - availableWidth * metrics.keyboardTextFieldWidthPercent / 100) / 2;
-  const int textLeft = content.x + effectiveMargin;
+  const int effectiveMargin = (railSafeWidth - availableWidth * metrics.keyboardTextFieldWidthPercent / 100) / 2;
+  const int textLeft = content.x + railLeft + effectiveMargin;
   const int toggleGap = isPassword ? 4 : 0;
   const int toggleReserve = isPassword ? std::max(renderer.getTextWidth(UI_12_FONT_ID, "[abc]"),
                                                   renderer.getTextWidth(UI_12_FONT_ID, "[***]")) +
                                              toggleGap
                                        : 0;
-  const int textAreaWidth = content.width - 2 * effectiveMargin - toggleReserve;
+  const int textAreaWidth = railSafeWidth - 2 * effectiveMargin - toggleReserve;
   const int maxLineWidth = textAreaWidth;
   const bool centerText = metrics.keyboardCenteredText;
 
@@ -872,7 +884,7 @@ void KeyboardEntryActivity::render(RenderLock&&) {
   if (isPassword) {
     const char* toggleLabel = passwordVisible ? "[***]" : "[abc]";
     const int toggleWidth = renderer.getTextWidth(UI_12_FONT_ID, toggleLabel);
-    const int toggleX = content.x + content.width - effectiveMargin - toggleWidth;
+    const int toggleX = content.x + content.width - railRight - effectiveMargin - toggleWidth;
     const int toggleY = inputStartY + inputHeight;
     const bool toggleSelected = cursorMode && togglePos;
 
@@ -994,8 +1006,9 @@ void KeyboardEntryActivity::render(RenderLock&&) {
   if (urlPanel) props.uniformKeyWidth = false;  // Shortcut rows stretch independently.
   if (!mappedInput.hasTouch()) props.background = fui::Paint::none();
   frame.target().fill(kbRect, props.background);
-  const int bottomEdge =
-      mappedInput.hasTouch() ? renderer.getScreenHeight() : renderer.getScreenHeight() - metrics.buttonHintsHeight;
+  const int bottomEdge = mappedInput.hasTouch()
+                             ? renderer.getScreenHeight()
+                             : renderer.getScreenHeight() - UITheme::getHintBandBottomInset(renderer);
   props.bottomHitOverflow = static_cast<int16_t>(std::max(0, bottomEdge - keysRect.bottom()));
   fui::keyboard(frame, keysRect, props);
   interactions.publish();
