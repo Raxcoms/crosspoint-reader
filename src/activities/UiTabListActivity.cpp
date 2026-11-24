@@ -95,7 +95,12 @@ void UiTabListActivity::syncTabListViewport(UiScreen& screen, fui::ListProps& pr
   syncListViewport(screen, props, 1);
 }
 
-int UiTabListActivity::readoutPosition() { return std::max(0, activeNav().selected - 1); }
+int UiTabListActivity::readoutPosition() {
+  // The ring's leading slot is the tab band; the readout is for rows, so a
+  // selection there reports -1 (no row selected, nothing to show).
+  const int ring = activeNav().selected;
+  return ring <= 0 ? -1 : ring - 1;
+}
 
 void UiTabListActivity::buildTabBar(UiScreen& screen) {
   const auto& metrics = UITheme::getInstance().getMetrics();

@@ -174,7 +174,8 @@ void UiListActivity::drawPositionReadout() {
   if (!positionReadout || readoutY_ < 0) return;
   const int count = listCount();
   if (count <= 0) return;
-  const int position = std::max(0, readoutPosition());
+  const int position = readoutPosition();
+  if (position < 0) return;  // no row selected (e.g. tab band), nothing to show
   char buf[24];
   snprintf(buf, sizeof(buf), "%d/%d", position + 1, count);
   const int width = renderer.getTextWidth(SMALL_FONT_ID, buf);

@@ -18,13 +18,12 @@ namespace fui = freeink::ui;
 constexpr int SMALL_FONT_ID = 0;
 struct UiScreen {
   int16_t height = 80;
-  // The viewport test checks ListNav clamping only; the position-readout line
-  // reservation is exercised by the real fui Screen in
-  // test_text_settings_layout.py and on device.
-  void insetContent(fui::Insets) {}
-  fui::Rect contentRect() const { return fui::Rect{0, 0, 200, height}; }
+  int16_t reserved = 0;
+  // Mirrors the real fui Screen: insetContent shrinks the content rect.
+  void insetContent(fui::Insets i) { reserved = i.bottom; }
+  fui::Rect contentRect() const { return fui::Rect{0, 0, 200, height - reserved}; }
   void syncListViewport(fui::ListNav& nav, fui::ListProps& props, int count, int offset) {
-    nav.syncToProps({0, 0, 200, height}, 20, 0, count, props, offset);
+    nav.syncToProps({0, 0, 200, height - reserved}, 20, 0, count, props, offset);
   }
 };
 struct UiListActivity {
@@ -50,6 +49,10 @@ int main() {
     nav.requestScroll(4);
     activity.syncListViewport(screen, props, offset);
     assert(nav.top == 4 && props.topIndex == 4 && nav.selected == offset);
+    // The readout line is reserved and anchored below the folded content:
+    // lineHeight 20 + 4px gap = 24px reserved, anchor just below the fold.
+    assert(activity.readoutY_ == 80 - 24 + 4);
+    assert(activity.readoutRight_ == 200);
     nav.onListRendered(4, 4, false);
     nav.selected = 5 + offset;
     nav.requestScroll(-4);

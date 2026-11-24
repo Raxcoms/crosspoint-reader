@@ -91,8 +91,8 @@ class UiListActivity : public Activity, protected UiAppHost {
   // syncListViewport reserves its line so rows never run under it. Disabled
   // by screens with their own pager or readout (library, OPDS browser, ...).
   bool positionReadout = true;
-  // 0-based row the readout reports. UiTabListActivity subtracts the ring's
-  // leading tab-band slot.
+  // 0-based row the readout reports, or -1 when the selection is not a row
+  // (UiTabListActivity's leading ring slot is the tab band).
   virtual int readoutPosition() { return activeNav().selected; }
   // Draws the readout. Called from the default drawFooter; screens with
   // custom button hints call it explicitly.
