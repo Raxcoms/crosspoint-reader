@@ -308,9 +308,7 @@ HomeActivity::HomeContentLayout HomeActivity::homeContentLayout() const {
   // self-insets in drawHeader, so only the cover/menu need it here.
   const Rect content = UITheme::getInstance().getContentArea(renderer);
 
-  const auto orientation = renderer.getOrientation();
-  const bool landscape = orientation == GfxRenderer::Orientation::LandscapeClockwise ||
-                         orientation == GfxRenderer::Orientation::LandscapeCounterClockwise;
+  const bool landscape = UITheme::isLandscape(renderer);
   if (!landscape) {
     // The menu height comes from the original portrait layout; the cover tile
     // takes everything above it.
@@ -322,16 +320,14 @@ HomeActivity::HomeContentLayout HomeActivity::homeContentLayout() const {
   }
 
   // Landscape is too short to stack cover over menu: split the band (bezel
-  // insets plus the rail gutter) left/right. The cover card and its title
-  // text, and the icon+label menu rows, both fit a half band (X4: ~375px).
-  const int railLeft = UITheme::getHintRailLeftGutter(renderer);
-  const int railRight = UITheme::getHintRailRightGutter(renderer);
-  const int bandX = content.x + railLeft;
-  const int bandW = content.width - railLeft - railRight;
+  // insets plus the rail gutter) left/right, columns side by side starting at
+  // the same top (worst case six menu rows exactly fills the band).
+  const auto rail = UITheme::getHintRails(renderer);
+  const int bandX = content.x + rail.left;
+  const int bandW = content.width - rail.left - rail.right;
   const int colW = bandW / 2;
-  const int menuTop = metrics.homeTopPadding + metrics.homeMenuTopOffset;
   return {Rect{bandX, metrics.homeTopPadding, colW, metrics.homeCoverTileHeight},
-          Rect{bandX + colW, menuTop, bandW - colW, pageHeight - menuTop}};
+          Rect{bandX + colW, metrics.homeTopPadding, bandW - colW, pageHeight - metrics.homeTopPadding}};
 }
 
 void HomeActivity::render(RenderLock&&) {

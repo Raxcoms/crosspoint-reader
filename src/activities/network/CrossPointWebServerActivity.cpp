@@ -488,13 +488,13 @@ void CrossPointWebServerActivity::renderServerRunning() const {
 
   // These screens paint with raw renderer calls, so the landscape rail gutter
   // that FUI screens get from the device context has to be applied by hand.
-  const int railLeft = UITheme::getHintRailLeftGutter(renderer);
-  const int railRight = UITheme::getHintRailRightGutter(renderer);
-  const Rect content{static_cast<int16_t>(railLeft + metrics.contentSidePadding), 0,
-                     static_cast<int16_t>(pageWidth - railLeft - railRight - 2 * metrics.contentSidePadding), 0};
-  // Landscape is too short to stack two QR codes; put them side by side when
-  // the band is wide enough for both plus air.
-  const bool sideBySide = content.width >= 2 * QR_CODE_WIDTH + metrics.verticalSpacing * 2;
+  const auto rail = UITheme::getHintRails(renderer);
+  const Rect content{static_cast<int16_t>(rail.left + metrics.contentSidePadding), 0,
+                     static_cast<int16_t>(pageWidth - rail.left - rail.right - 2 * metrics.contentSidePadding), 0};
+  // Landscape is too short to stack two QR codes sideways in the same band;
+  // put them side by side there, but keep portrait on the stacked layout.
+  const bool sideBySide =
+      UITheme::isLandscape(renderer) && content.width >= 2 * QR_CODE_WIDTH + metrics.verticalSpacing * 2;
 
   int startY = metrics.topPadding + metrics.headerHeight + metrics.tabBarHeight + metrics.verticalSpacing * 2;
   int height10 = renderer.getLineHeight(UI_10_FONT_ID);
@@ -516,12 +516,17 @@ void CrossPointWebServerActivity::renderServerRunning() const {
       QrUtils::drawQrCode(renderer, Rect{qrWifiX, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT}, wifiConfig);
       QrUtils::drawQrCode(renderer, Rect{qrUrlX, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT}, hostnameUrl);
       const int labelY = startY + QR_CODE_HEIGHT + metrics.verticalSpacing;
+      // Long SSIDs/hostnames may not fit the QR; clamp the text to the QR's
+      // left edge instead of running past the column when wider than it.
       const int ssidW = renderer.getTextWidth(UI_10_FONT_ID, connectedSSID.c_str());
-      renderer.drawText(UI_10_FONT_ID, qrWifiX + (QR_CODE_WIDTH - ssidW) / 2, labelY, connectedSSID.c_str());
+      const int ssidX = qrWifiX + std::max(0, (QR_CODE_WIDTH - ssidW) / 2);
+      renderer.drawText(UI_10_FONT_ID, ssidX, labelY, connectedSSID.c_str());
       const int hostW = renderer.getTextWidth(UI_10_FONT_ID, hostnameUrl.c_str());
-      renderer.drawText(UI_10_FONT_ID, qrUrlX + (QR_CODE_WIDTH - hostW) / 2, labelY, hostnameUrl.c_str());
+      const int hostX = qrUrlX + std::max(0, (QR_CODE_WIDTH - hostW) / 2);
+      renderer.drawText(UI_10_FONT_ID, hostX, labelY, hostnameUrl.c_str());
       const int ipW = renderer.getTextWidth(SMALL_FONT_ID, ipUrl.c_str());
-      renderer.drawText(SMALL_FONT_ID, qrUrlX + (QR_CODE_WIDTH - ipW) / 2, labelY + height10 + 2, ipUrl.c_str());
+      const int ipX = qrUrlX + std::max(0, (QR_CODE_WIDTH - ipW) / 2);
+      renderer.drawText(SMALL_FONT_ID, ipX, labelY + height10 + 2, ipUrl.c_str());
     } else {
       const Rect qrBoundsWifi(content.x, startY, QR_CODE_WIDTH, QR_CODE_HEIGHT);
       QrUtils::drawQrCode(renderer, qrBoundsWifi, wifiConfig);
